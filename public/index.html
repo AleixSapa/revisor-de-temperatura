@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="ca">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Monitor de Temperatura PC</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="header-top">
+                <div class="badge">SISTEMA</div>
+                <button id="btn-history" class="btn-history">
+                    <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    Historial
+                </button>
+            </div>
+            <h1>Monitor CPU</h1>
+            <p>Temperatura en temps real del sistema</p>
+        </header>
+        
+        <main>
+            <div class="temp-card">
+                <div class="gauge-container">
+                    <svg viewBox="0 0 100 100" class="gauge">
+                        <circle class="gauge-bg" cx="50" cy="50" r="45"></circle>
+                        <circle class="gauge-progress" cx="50" cy="50" r="45"></circle>
+                    </svg>
+                    <div class="temp-display">
+                        <span id="temp-value">--</span>
+                        <span class="unit">°C</span>
+                    </div>
+                </div>
+                
+                <div class="status-indicator">
+                    <div id="status-dot" class="dot"></div>
+                    <span id="status-text">Connectant...</span>
+                </div>
+
+                <!-- Nou: Culpable de la calor -->
+                <div id="culprit-container" class="culprit-container hidden">
+                    <span class="label">Possible Culpable</span>
+                    <div class="culprit-info">
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path></svg>
+                        <span id="culprit-name">--</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="info-grid">
+                <div class="info-item">
+                    <span class="label">Mínima</span>
+                    <span id="temp-min" class="val">--</span>
+                </div>
+                <div class="info-item">
+                    <span class="label">Màxima</span>
+                    <span id="temp-max" class="val">--</span>
+                </div>
+                <div class="info-item">
+                    <span class="label">Nuclis Totals</span>
+                    <span id="cpu-total" class="val">--</span>
+                </div>
+                <div class="info-item">
+                    <span class="label">Nuclis en Ús</span>
+                    <span id="cpu-used" class="val">--</span>
+                </div>
+            </div>
+
+            <div class="processes-card">
+                <span class="label">Top Consum CPU</span>
+                <ul id="process-list" class="process-list">
+                    <!-- S'omplirà amb JS -->
+                    <li class="loading">Carregant processos...</li>
+                </ul>
+            </div>
+            <div class="temp-guide">
+                <span class="label">Guia de Temperatures</span>
+                <div class="guide-grid">
+                    <div class="guide-item cool" id="guide-repos"><span>35-50°C</span> Repòs</div>
+                    <div class="guide-item normal" id="guide-normal"><span>50-70°C</span> Normal</div>
+                    <div class="guide-item heavy" id="guide-heavy"><span>70-85°C</span> Pesat</div>
+                    <div class="guide-item danger" id="guide-perill"><span>> 90°C</span> Perill</div>
+                </div>
+            </div>
+        </main>
+
+        <footer>
+            <p>Actualitzant cada 2 segons</p>
+        </footer>
+    </div>
+
+    <!-- Modal Historial -->
+    <div id="modal-history" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Historial de Consum</h2>
+                <button id="btn-close-modal" class="btn-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p class="modal-subtitle">Processos que han superat el 40% de CPU recentment:</p>
+                <ul id="history-list" class="history-list">
+                    <!-- Dinàmic -->
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
