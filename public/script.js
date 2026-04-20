@@ -1,12 +1,11 @@
 // === MODE DEMO: dades simulades quan no hi ha servidor ===
-let demoMode = false;
+// Si NO estem a localhost, activem mode demo directament (GitHub Pages no pot cridar HTTP)
+const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+let demoMode = !isLocal;
 let demoTemp = 45; // Temperatura inicial simulada
 let demoDirection = 1; // Puja o baixa
 
-// Intenta connectar al servidor; si falla, activa mode demo
-const API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-    ? ''
-    : 'http://localhost:3000';
+const API_BASE = ''; // Només funciona en local
 
 const tempValue = document.getElementById('temp-value');
 const tempMin = document.getElementById('temp-min');
