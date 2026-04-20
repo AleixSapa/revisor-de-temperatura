@@ -13,25 +13,36 @@ cpu_history = []
 MAX_HISTORY = 20
 
 class TempHandler(http.server.SimpleHTTPRequestHandler):
+    def end_headers(self):
+        # CORS headers perquè GitHub Pages pugui accedir al servidor local
+        self.send_header('Access-Control-Allow-Origin', '*')
+        self.send_header('Access-Control-Allow-Methods', 'GET, OPTIONS')
+        self.send_header('Access-Control-Allow-Headers', 'Content-Type')
+        super().end_headers()
+
+    def do_OPTIONS(self):
+        self.send_response(200)
+        self.end_headers()
+
     def do_GET(self):
         if self.path == '/api/temp':
             try:
-                # Provem diferents zones tèrmiques ja que thermal_zone0 pot no ser la CPU en tots els sistemes
+                # Usem la comanda exacta: cat /sys/class/thermal/thermal_zone0/temp | awk '{print $1/1000}'
+                # Si thermal_zone0 no existeix, provem zones successives
                 temp = None
-                for i in range(2): # Provem zone0 i zone1
+                for i in range(5):  # Provem zones 0-4
                     path = f"/sys/class/thermal/thermal_zone{i}/temp"
                     if os.path.exists(path):
-                        with open(path, 'r') as f:
-                            temp_raw = f.read().strip()
-                        temp = float(temp_raw) / 1000.0
+                        cmd = f"cat {path} | awk '{{print $1/1000}}'"
+                        raw = subprocess.check_output(cmd, shell=True).decode('utf-8').strip()
+                        temp = float(raw)
                         break
-                
+
                 if temp is None:
                     raise Exception("No s'ha trobat cap sensor de temperatura compatible")
 
                 self.send_response(200)
                 self.send_header('Content-type', 'application/json')
-                self.send_header('Access-Control-Allow-Origin', '*')
                 self.end_headers()
                 self.wfile.write(json.dumps({'temp': temp, 'unit': '°C'}).encode())
             except Exception as e:

@@ -1,3 +1,8 @@
+// Si estem a GitHub Pages, cridem l'API al servidor local
+const API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+    ? ''
+    : 'http://localhost:3000';
+
 const tempValue = document.getElementById('temp-value');
 const tempMin = document.getElementById('temp-min');
 const tempMax = document.getElementById('temp-max');
@@ -78,7 +83,7 @@ let latestTemp = 0;
 
 async function fetchTemp() {
     try {
-        const response = await fetch('/api/temp');
+        const response = await fetch(API_BASE + '/api/temp');
         if (!response.ok) throw new Error('Network response was not ok');
         
         const data = await response.json();
@@ -113,11 +118,11 @@ async function fetchTemp() {
 
 async function fetchProcesses() {
     try {
-        const response = await fetch('/api/processes');
+        const response = await fetch(API_BASE + '/api/processes');
         const data = await response.json();
         
         // Obtenim també l'ús total de CPU per fer el repartiment proporcional
-        const cpuResponse = await fetch('/api/cpu');
+        const cpuResponse = await fetch(API_BASE + '/api/cpu');
         const cpuData = await cpuResponse.json();
         const totalUsedCores = cpuData.used_cores || 0.1; // Evitem divisió per zero
 
@@ -157,7 +162,7 @@ async function fetchProcesses() {
 
 async function fetchCpu() {
     try {
-        const response = await fetch('/api/cpu');
+        const response = await fetch(API_BASE + '/api/cpu');
         const data = await response.json();
         if (data.total_cores) {
             document.getElementById('cpu-total').textContent = data.total_cores;
@@ -176,7 +181,7 @@ const historyList = document.getElementById('history-list');
 
 async function fetchHistory() {
     try {
-        const response = await fetch('/api/history');
+        const response = await fetch(API_BASE + '/api/history');
         const data = await response.json();
         
         if (data.history) {
@@ -231,4 +236,4 @@ setInterval(() => {
     fetchTemp();
     fetchProcesses();
     fetchCpu();
-}, 2000);
+}, 5000);
