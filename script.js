@@ -1,6 +1,13 @@
-// === DADES SIMULADES FRONTEND ===
+// === MODE SIMULACIÓ (NOMÉS SI EL SERVIDOR NO RESPON) ===
+let demoMode = false;
 let demoTemp = 45; // Temperatura inicial simulada
 let demoDirection = 1; // Puja o baixa
+
+// Si obrim index.html normal o a GitHub Pages / Live Server, el port sol ser diferent a 3000.
+// Per tant, apuntem directament on corre el servidor en segon pla (http://127.0.0.1:3000).
+const API_BASE = (window.location.port === '3000' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'))
+    ? '' 
+    : 'http://127.0.0.1:3000';
 
 const tempValue = document.getElementById('temp-value');
 const tempMin = document.getElementById('temp-min');
@@ -19,7 +26,8 @@ const CIRCUMFERENCE = 2 * Math.PI * 45;
 gaugeProgress.style.strokeDasharray = CIRCUMFERENCE;
 gaugeProgress.style.strokeDashoffset = CIRCUMFERENCE;
 
-// === DADES DEMO ===
+
+// === SIMULACIÓ (FAILBACK) ===
 const demoProcesses = [
     { name: 'Navegador (Chrome)', cpu: '12.3' },
     { name: 'Visual Studio Code', cpu: '8.7' },
@@ -28,10 +36,7 @@ const demoProcesses = [
     { name: 'Escriptori (Cinnamon)', cpu: '1.5' }
 ];
 
-let cpuHistoryDemo = [];
-
 function getDemoTemp() {
-    // Temperatura que oscil·la entre 38 i 72
     demoTemp += (Math.random() * 2 - 0.5) * demoDirection;
     if (demoTemp > 72) demoDirection = -1;
     if (demoTemp < 38) demoDirection = 1;
@@ -39,37 +44,35 @@ function getDemoTemp() {
 }
 
 function getDemoProcesses() {
-    return demoProcesses.map(p => {
-        const cpuVal = (parseFloat(p.cpu) + (Math.random() * 4 - 2)).toFixed(1);
-        
-        // Simular historial per CPU alta (> 40%)
-        // Això és molt poc probable amb els valors base d'adalt, així que de tant en tant 
-        // simularem una pujada
-        let finalCpu = cpuVal;
-        if (Math.random() > 0.95 && p.name === 'Visual Studio Code') {
-            finalCpu = (45 + Math.random() * 15).toFixed(1); 
-            // Guardar al historial
-            const timeStr = new Date().toLocaleTimeString('ca-ES', {hour12: false});
-            cpuHistoryDemo.unshift({
-                name: p.name,
-                time: timeStr,
-                cpu: finalCpu,
-                active: true
-            });
-            if (cpuHistoryDemo.length > 10) cpuHistoryDemo.pop();
-        }
-
-        return {
-            name: p.name,
-            cpu: finalCpu
-        };
-    }).sort((a, b) => parseFloat(b.cpu) - parseFloat(a.cpu));
+    return demoProcesses.map(p => ({
+        name: p.name,
+        cpu: (parseFloat(p.cpu) + (Math.random() * 4 - 2)).toFixed(1)
+    }));
 }
 
-// Ocultem el banner ja que ara és la versió per defecte
-document.body.style.paddingTop = '0';
-const existingBanner = document.getElementById('demo-banner');
-if(existingBanner) existingBanner.remove();
+function showDemoBanner() {
+    if (document.getElementById('demo-banner')) return;
+    const banner = document.createElement('div');
+    banner.id = 'demo-banner';
+    banner.style.cssText = `
+        position: fixed; top: 0; left: 0; right: 0; z-index: 9999;
+        background: linear-gradient(90deg, #f59e0b, #ef4444);
+        color: white; text-align: center; padding: 8px 16px;
+        font-family: 'Outfit', sans-serif; font-weight: 600; font-size: 14px;
+        letter-spacing: 1px;
+    `;
+    banner.textContent = '⚠️ MODE SIMULACIÓ — Les dades són irreals! Assegurat de tenir obert el "run.sh" per llegir les reals.';
+    document.body.prepend(banner);
+    document.body.style.paddingTop = '36px';
+}
+
+function hideDemoBanner() {
+    const banner = document.getElementById('demo-banner');
+    if (banner) {
+        banner.remove();
+        document.body.style.paddingTop = '0';
+    }
+}
 
 // === FUNCIONS DE VISUALITZACIÓ ===
 function updateGauge(temp) {
@@ -143,25 +146,45 @@ function applyTempData(temp) {
 
 function applyProcessData(processes, totalUsedCores) {
     const list = document.getElementById('process-list');
-    list.innerHTML = '';
     const degreesToDistribute = Math.max(0, latestTemp - 35);
+    
+    // Si la llista té el missatge de "Càrrega", l'esborrem de forma segura
+    if (list.querySelector('.loading')) {
+        list.innerHTML = '';
+    }
 
-    processes.forEach(proc => {
+    const existingItems = list.querySelectorAll('.process-item');
+
+    processes.forEach((proc, index) => {
         const cpuVal = parseFloat(proc.cpu);
         const proportion = (cpuVal / 100) / totalUsedCores;
         const processDegrees = (proportion * degreesToDistribute).toFixed(1);
 
-        const li = document.createElement('li');
-        li.className = 'process-item';
-        li.innerHTML = `
-            <span class="process-name">${proc.name}</span>
-            <div class="process-stats">
-                <span class="process-temp">+${processDegrees}°C</span>
-                <span class="process-cpu">${proc.cpu}%</span>
-            </div>
-        `;
-        list.appendChild(li);
+        if (existingItems[index]) {
+            // Actualitzem dades existents sense trencar la visualització per evitar parpelleigs
+            const li = existingItems[index];
+            li.querySelector('.process-name').textContent = proc.name;
+            li.querySelector('.process-temp').textContent = `+${processDegrees}°C`;
+            li.querySelector('.process-cpu').textContent = `${proc.cpu}%`;
+        } else {
+            // Creem l'element només si no en tenim prou a la llista
+            const li = document.createElement('li');
+            li.className = 'process-item';
+            li.innerHTML = `
+                <span class="process-name">${proc.name}</span>
+                <div class="process-stats">
+                    <span class="process-temp">+${processDegrees}°C</span>
+                    <span class="process-cpu">${proc.cpu}%</span>
+                </div>
+            `;
+            list.appendChild(li);
+        }
     });
+
+    // Eliminem els elements sobrants (si passem de 5 a 4 processos per algun motiu)
+    for (let i = processes.length; i < existingItems.length; i++) {
+        existingItems[i].remove();
+    }
 
     updateCulprit(processes, latestTemp);
 }
@@ -171,52 +194,92 @@ function applyCpuData(totalCores, usedCores) {
     document.getElementById('cpu-used').textContent = usedCores.toFixed(2);
 }
 
-function updateSimulation() {
-    const fakeTemp = getDemoTemp();
-    applyTempData(fakeTemp);
-
-    const fakeCores = 8;
-    const fakeUsed = 0.5 + Math.random() * 2.5;
-    applyCpuData(fakeCores, fakeUsed);
-
-    const fakeProcesses = getDemoProcesses();
-    applyProcessData(fakeProcesses, fakeUsed);
+// === FETCH REAL (SERVIDOR) ===
+async function fetchTemp() {
+    try {
+        const response = await fetch(API_BASE + '/api/temp');
+        if (!response.ok) throw new Error('Network response was not ok');
+        const data = await response.json();
+        if (typeof data.temp === 'number') {
+            if (demoMode) { demoMode = false; hideDemoBanner(); }
+            applyTempData(data.temp);
+        }
+    } catch (error) {
+        if (!demoMode) { demoMode = true; showDemoBanner(); }
+        applyTempData(getDemoTemp());
+    }
 }
 
-// Modal History Logic
+async function fetchProcesses() {
+    try {
+        const response = await fetch(API_BASE + '/api/processes');
+        const data = await response.json();
+        const cpuResponse = await fetch(API_BASE + '/api/cpu');
+        const cpuData = await cpuResponse.json();
+        const totalUsedCores = cpuData.used_cores || 0.1;
+        if (data.processes) {
+            applyProcessData(data.processes, totalUsedCores);
+        }
+    } catch (error) {
+        const fakeProcesses = getDemoProcesses();
+        const fakeTotalCores = 0.8 + Math.random() * 0.5;
+        applyProcessData(fakeProcesses, fakeTotalCores);
+    }
+}
+
+async function fetchCpu() {
+    try {
+        const response = await fetch(API_BASE + '/api/cpu');
+        const data = await response.json();
+        if (data.total_cores) {
+            applyCpuData(data.total_cores, data.used_cores);
+        }
+    } catch (error) {
+        const fakeCores = 8;
+        const fakeUsed = 0.5 + Math.random() * 2.5;
+        applyCpuData(fakeCores, fakeUsed);
+    }
+}
+
+// === HISTORY MODAL ===
 const modal = document.getElementById('modal-history');
 const btnHistory = document.getElementById('btn-history');
 const btnCloseModal = document.getElementById('btn-close-modal');
 const historyList = document.getElementById('history-list');
 
-function renderHistory() {
-    historyList.innerHTML = '';
-    if (cpuHistoryDemo.length === 0) {
-        historyList.innerHTML = '<li class="loading">No hi ha processos recents amb consum alt (>40%)</li>';
-        return;
+async function fetchHistory() {
+    try {
+        const response = await fetch(API_BASE + '/api/history');
+        const data = await response.json();
+        if (data.history) {
+            historyList.innerHTML = '';
+            if (data.history.length === 0) {
+                historyList.innerHTML = '<li class="loading">No hi ha processos recents amb consum alt (>40%)</li>';
+                return;
+            }
+            data.history.forEach(item => {
+                const li = document.createElement('li');
+                li.className = 'history-item';
+                const statusHtml = item.active 
+                    ? '<span class="status-badge active">🔴 Actiu</span>' 
+                    : '<span class="status-badge">⚪ Finalitzat</span>';
+                li.innerHTML = `
+                    <div class="history-info">
+                        <span class="history-name">${item.name}</span>
+                        <span class="history-time">${statusHtml} • a les ${item.time}</span>
+                    </div>
+                    <span class="history-cpu">${parseFloat(item.cpu).toFixed(1)}%</span>
+                `;
+                historyList.appendChild(li);
+            });
+        }
+    } catch (error) {
+        historyList.innerHTML = '<li class="loading">⚠️ Mode Simulació: no hi ha historial real disponible. Executa el backend!</li>';
     }
-    cpuHistoryDemo.forEach(item => {
-        const li = document.createElement('li');
-        li.className = 'history-item';
-        // Randomly make older things inactive
-        if (Math.random() > 0.5) item.active = false;
-        
-        const statusHtml = item.active 
-            ? '<span class="status-badge active">🔴 Actiu</span>' 
-            : '<span class="status-badge">⚪ Finalitzat</span>';
-        li.innerHTML = `
-            <div class="history-info">
-                <span class="history-name">${item.name}</span>
-                <span class="history-time">${statusHtml} • a les ${item.time}</span>
-            </div>
-            <span class="history-cpu">${parseFloat(item.cpu).toFixed(1)}%</span>
-        `;
-        historyList.appendChild(li);
-    });
 }
 
 btnHistory.addEventListener('click', () => {
-    renderHistory();
+    fetchHistory();
     modal.classList.add('active');
 });
 
@@ -230,6 +293,12 @@ window.addEventListener('click', (e) => {
     }
 });
 
-// Inici de la simulació pura
-updateSimulation();
-setInterval(updateSimulation, 2000);
+// INIT
+fetchTemp();
+fetchProcesses();
+fetchCpu();
+setInterval(() => {
+    fetchTemp();
+    fetchProcesses();
+    fetchCpu();
+}, 5000);
