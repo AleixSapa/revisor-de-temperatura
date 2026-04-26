@@ -1,11 +1,6 @@
-// === MODE DEMO: dades simulades quan no hi ha servidor ===
-// Si NO estem a localhost, activem mode demo directament (GitHub Pages no pot cridar HTTP)
-const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-let demoMode = !isLocal;
+// === DADES SIMULADES FRONTEND ===
 let demoTemp = 45; // Temperatura inicial simulada
 let demoDirection = 1; // Puja o baixa
-
-const API_BASE = ''; // Només funciona en local
 
 const tempValue = document.getElementById('temp-value');
 const tempMin = document.getElementById('temp-min');
@@ -24,7 +19,7 @@ const CIRCUMFERENCE = 2 * Math.PI * 45;
 gaugeProgress.style.strokeDasharray = CIRCUMFERENCE;
 gaugeProgress.style.strokeDashoffset = CIRCUMFERENCE;
 
-// === DADES DEMO SIMULADES ===
+// === DADES DEMO ===
 const demoProcesses = [
     { name: 'Navegador (Chrome)', cpu: '12.3' },
     { name: 'Visual Studio Code', cpu: '8.7' },
@@ -33,46 +28,48 @@ const demoProcesses = [
     { name: 'Escriptori (Cinnamon)', cpu: '1.5' }
 ];
 
+let cpuHistoryDemo = [];
+
 function getDemoTemp() {
-    // Temperatura que oscil·la entre 38 i 72 de manera realista
+    // Temperatura que oscil·la entre 38 i 72
     demoTemp += (Math.random() * 2 - 0.5) * demoDirection;
     if (demoTemp > 72) demoDirection = -1;
     if (demoTemp < 38) demoDirection = 1;
-    // Petit soroll
     return Math.round(demoTemp * 10) / 10;
 }
 
 function getDemoProcesses() {
-    return demoProcesses.map(p => ({
-        name: p.name,
-        cpu: (parseFloat(p.cpu) + (Math.random() * 4 - 2)).toFixed(1)
-    }));
+    return demoProcesses.map(p => {
+        const cpuVal = (parseFloat(p.cpu) + (Math.random() * 4 - 2)).toFixed(1);
+        
+        // Simular historial per CPU alta (> 40%)
+        // Això és molt poc probable amb els valors base d'adalt, així que de tant en tant 
+        // simularem una pujada
+        let finalCpu = cpuVal;
+        if (Math.random() > 0.95 && p.name === 'Visual Studio Code') {
+            finalCpu = (45 + Math.random() * 15).toFixed(1); 
+            // Guardar al historial
+            const timeStr = new Date().toLocaleTimeString('ca-ES', {hour12: false});
+            cpuHistoryDemo.unshift({
+                name: p.name,
+                time: timeStr,
+                cpu: finalCpu,
+                active: true
+            });
+            if (cpuHistoryDemo.length > 10) cpuHistoryDemo.pop();
+        }
+
+        return {
+            name: p.name,
+            cpu: finalCpu
+        };
+    }).sort((a, b) => parseFloat(b.cpu) - parseFloat(a.cpu));
 }
 
-function showDemoBanner() {
-    if (document.getElementById('demo-banner')) return;
-    const banner = document.createElement('div');
-    banner.id = 'demo-banner';
-    banner.style.cssText = `
-        position: fixed; top: 0; left: 0; right: 0; z-index: 9999;
-        background: linear-gradient(90deg, #f59e0b, #ef4444);
-        color: white; text-align: center; padding: 8px 16px;
-        font-family: 'Outfit', sans-serif; font-weight: 600; font-size: 14px;
-        letter-spacing: 1px;
-    `;
-    banner.textContent = '⚠️ MODE DEMO — Dades simulades (el servidor local no està actiu)';
-    document.body.prepend(banner);
-    // Afegir padding al body perquè el banner no tapi contingut
-    document.body.style.paddingTop = '36px';
-}
-
-function hideDemoBanner() {
-    const banner = document.getElementById('demo-banner');
-    if (banner) {
-        banner.remove();
-        document.body.style.paddingTop = '0';
-    }
-}
+// Ocultem el banner ja que ara és la versió per defecte
+document.body.style.paddingTop = '0';
+const existingBanner = document.getElementById('demo-banner');
+if(existingBanner) existingBanner.remove();
 
 // === FUNCIONS DE VISUALITZACIÓ ===
 function updateGauge(temp) {
@@ -174,54 +171,16 @@ function applyCpuData(totalCores, usedCores) {
     document.getElementById('cpu-used').textContent = usedCores.toFixed(2);
 }
 
-// === FETCH REAL (servidor) ===
-async function fetchTemp() {
-    try {
-        const response = await fetch(API_BASE + '/api/temp');
-        if (!response.ok) throw new Error('Network response was not ok');
-        const data = await response.json();
-        if (typeof data.temp === 'number') {
-            if (demoMode) { demoMode = false; hideDemoBanner(); }
-            applyTempData(data.temp);
-        }
-    } catch (error) {
-        // Si falla, mode demo
-        if (!demoMode) { demoMode = true; showDemoBanner(); }
-        applyTempData(getDemoTemp());
-    }
-}
+function updateSimulation() {
+    const fakeTemp = getDemoTemp();
+    applyTempData(fakeTemp);
 
-async function fetchProcesses() {
-    try {
-        const response = await fetch(API_BASE + '/api/processes');
-        const data = await response.json();
-        const cpuResponse = await fetch(API_BASE + '/api/cpu');
-        const cpuData = await cpuResponse.json();
-        const totalUsedCores = cpuData.used_cores || 0.1;
-        if (data.processes) {
-            applyProcessData(data.processes, totalUsedCores);
-        }
-    } catch (error) {
-        // Mode demo: processos simulats
-        const fakeProcesses = getDemoProcesses();
-        const fakeTotalCores = 0.8 + Math.random() * 0.5;
-        applyProcessData(fakeProcesses, fakeTotalCores);
-    }
-}
+    const fakeCores = 8;
+    const fakeUsed = 0.5 + Math.random() * 2.5;
+    applyCpuData(fakeCores, fakeUsed);
 
-async function fetchCpu() {
-    try {
-        const response = await fetch(API_BASE + '/api/cpu');
-        const data = await response.json();
-        if (data.total_cores) {
-            applyCpuData(data.total_cores, data.used_cores);
-        }
-    } catch (error) {
-        // Mode demo
-        const fakeCores = 8;
-        const fakeUsed = 0.5 + Math.random() * 2.5;
-        applyCpuData(fakeCores, fakeUsed);
-    }
+    const fakeProcesses = getDemoProcesses();
+    applyProcessData(fakeProcesses, fakeUsed);
 }
 
 // Modal History Logic
@@ -230,39 +189,34 @@ const btnHistory = document.getElementById('btn-history');
 const btnCloseModal = document.getElementById('btn-close-modal');
 const historyList = document.getElementById('history-list');
 
-async function fetchHistory() {
-    try {
-        const response = await fetch(API_BASE + '/api/history');
-        const data = await response.json();
-        if (data.history) {
-            historyList.innerHTML = '';
-            if (data.history.length === 0) {
-                historyList.innerHTML = '<li class="loading">No hi ha processos recents amb consum alt (>40%)</li>';
-                return;
-            }
-            data.history.forEach(item => {
-                const li = document.createElement('li');
-                li.className = 'history-item';
-                const statusHtml = item.active 
-                    ? '<span class="status-badge active">🔴 Actiu</span>' 
-                    : '<span class="status-badge">⚪ Finalitzat</span>';
-                li.innerHTML = `
-                    <div class="history-info">
-                        <span class="history-name">${item.name}</span>
-                        <span class="history-time">${statusHtml} • a les ${item.time}</span>
-                    </div>
-                    <span class="history-cpu">${parseFloat(item.cpu).toFixed(1)}%</span>
-                `;
-                historyList.appendChild(li);
-            });
-        }
-    } catch (error) {
-        historyList.innerHTML = '<li class="loading">⚠️ Mode Demo: no hi ha historial disponible</li>';
+function renderHistory() {
+    historyList.innerHTML = '';
+    if (cpuHistoryDemo.length === 0) {
+        historyList.innerHTML = '<li class="loading">No hi ha processos recents amb consum alt (>40%)</li>';
+        return;
     }
+    cpuHistoryDemo.forEach(item => {
+        const li = document.createElement('li');
+        li.className = 'history-item';
+        // Randomly make older things inactive
+        if (Math.random() > 0.5) item.active = false;
+        
+        const statusHtml = item.active 
+            ? '<span class="status-badge active">🔴 Actiu</span>' 
+            : '<span class="status-badge">⚪ Finalitzat</span>';
+        li.innerHTML = `
+            <div class="history-info">
+                <span class="history-name">${item.name}</span>
+                <span class="history-time">${statusHtml} • a les ${item.time}</span>
+            </div>
+            <span class="history-cpu">${parseFloat(item.cpu).toFixed(1)}%</span>
+        `;
+        historyList.appendChild(li);
+    });
 }
 
 btnHistory.addEventListener('click', () => {
-    fetchHistory();
+    renderHistory();
     modal.classList.add('active');
 });
 
@@ -270,18 +224,12 @@ btnCloseModal.addEventListener('click', () => {
     modal.classList.remove('active');
 });
 
-window.addEventListener('click', (e) => {
+window.addEventListener('click', (e) => { 
     if (e.target === modal) {
         modal.classList.remove('active');
     }
 });
 
-// Initial fetch and start interval
-fetchTemp();
-fetchProcesses();
-fetchCpu();
-setInterval(() => {
-    fetchTemp();
-    fetchProcesses();
-    fetchCpu();
-}, 5000);
+// Inici de la simulació pura
+updateSimulation();
+setInterval(updateSimulation, 2000);
