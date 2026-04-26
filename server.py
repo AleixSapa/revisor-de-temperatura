@@ -178,7 +178,7 @@ class TempHandler(http.server.SimpleHTTPRequestHandler):
         else:
             path = self.path
             if path == '/':
-                path = '/Index.html'
+                path = '/inici.html'
             
             # Serve files from the current directory (since we moved everything to the root)
             filepath = os.path.join(os.getcwd(), path.lstrip('/'))

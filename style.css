@@ -412,7 +412,7 @@ footer {
 .modal {
     display: none;
     position: fixed;
-    z-Index: 1000;
+    z-Inici: 1000;
     left: 0;
     top: 0;
     width: 100%;

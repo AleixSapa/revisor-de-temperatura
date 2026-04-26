@@ -1,9 +1,9 @@
 // === MODE SIMULACIÓ (NOMÉS SI EL SERVIDOR NO RESPON) ===
 let demoMode = false;
-let demoTemp = 45; // Temperatura Indexal simulada
+let demoTemp = 45; // Temperatura Inicial simulada
 let demoDirection = 1; // Puja o baixa
 
-// Si obrim Index.html normal o a GitHub Pages / Live Server, el port sol ser diferent a 3000.
+// Si obrim Inici.html normal o a GitHub Pages / Live Server, el port sol ser diferent a 3000.
 // Per tant, apuntem directament on corre el servidor en segon pla (http://127.0.0.1:3000).
 const API_BASE = (window.location.port === '3000' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'))
     ? '' 
@@ -51,19 +51,8 @@ function getDemoProcesses() {
 }
 
 function showDemoBanner() {
-    if (document.getElementById('demo-banner')) return;
-    const banner = document.createElement('div');
-    banner.id = 'demo-banner';
-    banner.style.cssText = `
-        position: fixed; top: 0; left: 0; right: 0; z-Index: 9999;
-        background: linear-gradient(90deg, #f59e0b, #ef4444);
-        color: white; text-align: center; padding: 8px 16px;
-        font-family: 'Outfit', sans-serif; font-weight: 600; font-size: 14px;
-        letter-spacing: 1px;
-    `;
-    banner.textContent = '⚠️ MODE SIMULACIÓ — Les dades són irreals! Assegurat de tenir obert el "run.sh" per llegir les reals.';
-    document.body.prepend(banner);
-    document.body.style.paddingTop = '36px';
+    // El banner s'ha eliminat per petició de l'usuari
+    return;
 }
 
 function hideDemoBanner() {
@@ -155,14 +144,14 @@ function applyProcessData(processes, totalUsedCores) {
 
     const existingItems = list.querySelectorAll('.process-item');
 
-    processes.forEach((proc, Index) => {
+    processes.forEach((proc, Inici) => {
         const cpuVal = parseFloat(proc.cpu);
         const proportion = (cpuVal / 100) / totalUsedCores;
         const processDegrees = (proportion * degreesToDistribute).toFixed(1);
 
-        if (existingItems[Index]) {
+        if (existingItems[Inici]) {
             // Actualitzem dades existents sense trencar la visualització per evitar parpelleigs
-            const li = existingItems[Index];
+            const li = existingItems[Inici];
             li.querySelector('.process-name').textContent = proc.name;
             li.querySelector('.process-temp').textContent = `+${processDegrees}°C`;
             li.querySelector('.process-cpu').textContent = `${proc.cpu}%`;
@@ -274,7 +263,7 @@ async function fetchHistory() {
             });
         }
     } catch (error) {
-        historyList.innerHTML = '<li class="loading">⚠️ Mode Simulació: no hi ha historial real disponible. Executa el backend!</li>';
+        historyList.innerHTML = '<li class="loading">Connectant amb el servidor per buscar dades reals...</li>';
     }
 }
 

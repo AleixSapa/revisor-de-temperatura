@@ -1,0 +1,8 @@
+[Desktop Entry]
+Name=Monitor de Temperatura
+Comment=Monitoritza la temperatura i CPU del sistema
+Exec=bash -c "cd '/home/aleixsapa/Documents/temperatura ordinador/revisor-de-temperatura' && ./run.sh && xdg-open http://localhost:3000"
+Icon=/home/aleixsapa/Documents/temperatura ordinador/revisor-de-temperatura/icon.svg
+Terminal=false
+Type=Application
+Categories=System;Monitor;
