@@ -1,9 +1,9 @@
 // === MODE SIMULACIÓ (NOMÉS SI EL SERVIDOR NO RESPON) ===
 let demoMode = false;
-let demoTemp = 45; // Temperatura inicial simulada
+let demoTemp = 45; // Temperatura Indexal simulada
 let demoDirection = 1; // Puja o baixa
 
-// Si obrim index.html normal o a GitHub Pages / Live Server, el port sol ser diferent a 3000.
+// Si obrim Index.html normal o a GitHub Pages / Live Server, el port sol ser diferent a 3000.
 // Per tant, apuntem directament on corre el servidor en segon pla (http://127.0.0.1:3000).
 const API_BASE = (window.location.port === '3000' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'))
     ? '' 
@@ -55,7 +55,7 @@ function showDemoBanner() {
     const banner = document.createElement('div');
     banner.id = 'demo-banner';
     banner.style.cssText = `
-        position: fixed; top: 0; left: 0; right: 0; z-index: 9999;
+        position: fixed; top: 0; left: 0; right: 0; z-Index: 9999;
         background: linear-gradient(90deg, #f59e0b, #ef4444);
         color: white; text-align: center; padding: 8px 16px;
         font-family: 'Outfit', sans-serif; font-weight: 600; font-size: 14px;
@@ -155,14 +155,14 @@ function applyProcessData(processes, totalUsedCores) {
 
     const existingItems = list.querySelectorAll('.process-item');
 
-    processes.forEach((proc, index) => {
+    processes.forEach((proc, Index) => {
         const cpuVal = parseFloat(proc.cpu);
         const proportion = (cpuVal / 100) / totalUsedCores;
         const processDegrees = (proportion * degreesToDistribute).toFixed(1);
 
-        if (existingItems[index]) {
+        if (existingItems[Index]) {
             // Actualitzem dades existents sense trencar la visualització per evitar parpelleigs
-            const li = existingItems[index];
+            const li = existingItems[Index];
             li.querySelector('.process-name').textContent = proc.name;
             li.querySelector('.process-temp').textContent = `+${processDegrees}°C`;
             li.querySelector('.process-cpu').textContent = `${proc.cpu}%`;

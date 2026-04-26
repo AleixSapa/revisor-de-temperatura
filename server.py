@@ -19,6 +19,10 @@ class TempHandler(http.server.SimpleHTTPRequestHandler):
         self.send_header('Access-Control-Allow-Methods', 'GET, OPTIONS')
         self.send_header('Access-Control-Allow-Headers', 'Content-Type')
         super().end_headers()
+    
+    def log_message(self, format, *args):
+        # Suprimir logs per evitar que serve.log creixi massa
+        return
 
     def do_OPTIONS(self):
         self.send_response(200)
@@ -174,7 +178,7 @@ class TempHandler(http.server.SimpleHTTPRequestHandler):
         else:
             path = self.path
             if path == '/':
-                path = '/index.html'
+                path = '/Index.html'
             
             # Serve files from the current directory (since we moved everything to the root)
             filepath = os.path.join(os.getcwd(), path.lstrip('/'))
