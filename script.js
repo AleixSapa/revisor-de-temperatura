@@ -293,6 +293,71 @@ window.addEventListener('click', (e) => {
     }
 });
 
+// === PWA INSTALLATION LOGIC ===
+let deferredPrompt;
+const btnInstall = document.getElementById('btn-install');
+const installModal = document.getElementById('modal-install');
+const btnCloseInstallModal = document.getElementById('btn-close-install-modal');
+
+window.addEventListener('beforeinstallprompt', (e) => {
+    // Evitem que surti el missatge genèric del navegador ràpid
+    e.preventDefault();
+    deferredPrompt = e;
+});
+
+if (btnInstall) {
+    btnInstall.addEventListener('click', () => {
+        if (installModal) {
+            installModal.classList.add('active');
+            
+            const warningBox = document.getElementById('install-warning');
+            if (warningBox) {
+                // Si deferredPrompt és null vol dir que el Chrome el bloqueja
+                warningBox.style.display = !deferredPrompt ? 'block' : 'none';
+            }
+        }
+    });
+}
+
+const btnForceInstall = document.getElementById('btn-force-install');
+if (btnForceInstall) {
+    btnForceInstall.addEventListener('click', async () => {
+        if (!deferredPrompt) {
+            alert("Bloquejat pel navegador. Clica el botó de Chrome directament dalt a la dreta per ignorar aquest bloqueig de seguretat nativa.");
+            return;
+        }
+        
+        deferredPrompt.prompt();
+        const { outcome } = await deferredPrompt.userChoice;
+        if (outcome === 'accepted') {
+            console.log("S'ha instal·lat la PWA!");
+            if (installModal) installModal.classList.remove('active');
+        }
+        deferredPrompt = null;
+    });
+}
+
+if (btnCloseInstallModal) {
+    btnCloseInstallModal.addEventListener('click', () => {
+        if (installModal) {
+            installModal.classList.remove('active');
+        }
+    });
+}
+
+// També permetem tancar-lo fent clic fóra de la caixa
+if (installModal) {
+    installModal.addEventListener('click', (e) => {
+        if (e.target === installModal) {
+            installModal.classList.remove('active');
+        }
+    });
+}
+
+window.addEventListener('appinstalled', () => {
+    deferredPrompt = null;
+});
+
 // INIT
 fetchTemp();
 fetchProcesses();

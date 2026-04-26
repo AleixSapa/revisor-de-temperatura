@@ -3,6 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#0f172a">
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" type="image/svg+xml" href="icon.svg">
     <title>Monitor de Temperatura PC</title>
     <link rel="stylesheet" href="style.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -14,10 +17,16 @@
         <header>
             <div class="header-top">
                 <div class="badge">SISTEMA</div>
-                <button id="btn-history" class="btn-history">
-                    <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                    Historial
-                </button>
+                <div style="display: flex; gap: 0.5rem;">
+                    <button id="btn-install" class="btn-history" style="color: #38bdf8; border-color: rgba(56,189,248,0.3);">
+                        <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"></path></svg>
+                        Instal·lar
+                    </button>
+                    <button id="btn-history" class="btn-history">
+                        <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                        Historial
+                    </button>
+                </div>
             </div>
             <h1>Monitor CPU</h1>
             <p>Temperatura en temps real del sistema</p>
@@ -109,6 +118,42 @@
         </div>
     </div>
 
+    <!-- Modal Instal·lar -->
+    <div id="modal-install" class="modal">
+        <div class="modal-content" style="text-align: center; max-width: 450px;">
+            <div class="modal-header" style="justify-content: center; margin-bottom: 1rem;">
+                <h2 style="color: var(--accent-color); display: flex; align-items: center; gap: 0.5rem;">
+                    <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                    Instal·lació
+                </h2>
+            </div>
+            <div class="modal-body" style="color: var(--text-secondary); line-height: 1.6; font-size: 0.95rem;">
+                <p style="margin-bottom: 1.5rem; color: var(--text-primary);">Vols instal·lar el <strong>Monitor de Temperatura</strong> com una aplicació nativa i indepedent al teu sistema?</p>
+                
+                <div id="install-warning" style="display: none; background: rgba(245, 158, 11, 0.1); border: 1px dashed rgba(245, 158, 11, 0.3); padding: 1rem; border-radius: 1rem; color: var(--warning); font-size: 0.85rem; margin-bottom: 1.5rem; text-align: left;">
+                    <strong style="display: block; margin-bottom: 0.25rem;">Avís del sistema:</strong>
+                    Chrome indica que ja ho tens pre-configurat o instal·lat fa poc. Si el forçat falla per seguretat, fes servir la icona "Obre a l'aplicació" de la barra d'adreces a dalt a la dreta.
+                </div>
+
+                <div style="display: flex; gap: 1rem; justify-content: center; margin-top: 1.5rem;">
+                    <button id="btn-close-install-modal" style="background: rgba(255, 255, 255, 0.05); color: var(--text-primary); border: 1px solid rgba(255, 255, 255, 0.2); padding: 0.75rem 1.5rem; border-radius: 9999px; font-weight: 600; cursor: pointer; transition: all 0.2s;">Cancel·lar</button>
+                    <button id="btn-force-install" style="background: var(--accent-color); color: #020617; border: none; padding: 0.75rem 2rem; border-radius: 9999px; font-weight: 800; cursor: pointer; transition: all 0.2s; box-shadow: 0 0 15px rgba(56,189,248,0.4);">Instal·lar de tots modes</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="script.js"></script>
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js').then(reg => {
+                    console.log('Caché pel PWA registrat correctament.', reg);
+                }).catch(err => {
+                    console.log('Error al registrar PWA:', err);
+                });
+            });
+        }
+    </script>
 </body>
 </html>
