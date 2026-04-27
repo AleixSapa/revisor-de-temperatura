@@ -1,7 +1,7 @@
-const CACHE_NAME = 'monitor-temp-v1';
+const CACHE_NAME = 'monitor-temp-v2';
 const ASSETS_TO_CACHE = [
     './',
-    './Inici.html',
+    './inici.html',
     './style.css',
     './script.js',
     './icon.svg',

@@ -5,12 +5,16 @@ import json
 import os
 import sys
 import datetime
-
-PORT = 3000
+import argparse
+import random
 
 # Historial de processos que han consumit molt
 cpu_history = []
 MAX_HISTORY = 20
+
+# Configuració per defecte
+PORT = 3000
+TEST_MODE = False
 
 class TempHandler(http.server.SimpleHTTPRequestHandler):
     def end_headers(self):
@@ -21,7 +25,8 @@ class TempHandler(http.server.SimpleHTTPRequestHandler):
         super().end_headers()
     
     def log_message(self, format, *args):
-        # Suprimir logs per evitar que serve.log creixi massa
+        # Suprimim logs perquè si fem servir Live Server, cada escriptura 
+        # al fitxer serve.log refresca la pàgina automàticament.
         return
 
     def do_OPTIONS(self):
@@ -29,31 +34,36 @@ class TempHandler(http.server.SimpleHTTPRequestHandler):
         self.end_headers()
 
     def do_GET(self):
-        if self.path == '/api/temp':
+        clean_path = self.path.split('?')[0].rstrip('/')
+        if clean_path == '/api/temp':
             try:
-                # Usem la comanda exacta: cat /sys/class/thermal/thermal_zone0/temp | awk '{print $1/1000}'
-                temp = None
-                for i in range(5):  # Provem zones 0-4
-                    path = f"/sys/class/thermal/thermal_zone{i}/temp"
-                    if os.path.exists(path):
-                        cmd = f"cat {path} | awk '{{print $1/1000}}'"
-                        raw = subprocess.check_output(cmd, shell=True).decode('utf-8').strip()
-                        temp = float(raw)
-                        break
+                if TEST_MODE:
+                    # Simulació de temperatura
+                    temp = round(40 + random.random() * 30, 1)
+                else:
+                    # Usem la comanda exacta: cat /sys/class/thermal/thermal_zone0/temp | awk '{print $1/1000}'
+                    temp = None
+                    for i in range(5):  # Provem zones 0-4
+                        path = f"/sys/class/thermal/thermal_zone{i}/temp"
+                        if os.path.exists(path):
+                            cmd = f"cat {path} | awk '{{print $1/1000}}'"
+                            raw = subprocess.check_output(cmd, shell=True).decode('utf-8').strip()
+                            temp = float(raw)
+                            break
 
-                if temp is None:
-                    raise Exception("No s'ha trobat cap sensor de temperatura compatible")
+                    if temp is None:
+                        raise Exception("No s'ha trobat cap sensor de temperatura compatible")
 
                 self.send_response(200)
                 self.send_header('Content-type', 'application/json')
                 self.end_headers()
-                self.wfile.write(json.dumps({'temp': temp, 'unit': '°C'}).encode())
+                self.wfile.write(json.dumps({'temp': temp, 'unit': '°C', 'demo': TEST_MODE}).encode())
             except Exception as e:
                 self.send_response(500)
                 self.send_header('Content-type', 'application/json')
                 self.end_headers()
                 self.wfile.write(json.dumps({'error': str(e)}).encode())
-        elif self.path == '/api/processes':
+        elif clean_path == '/api/processes':
             try:
                 # Diccionari de noms amigables
                 friendly_names = {
@@ -86,90 +96,108 @@ class TempHandler(http.server.SimpleHTTPRequestHandler):
                     'git': 'Git (Control de versions)'
                 }
 
-                # Obtenim els top 5 processos per CPU
-                cmd = "ps -eo comm,%cpu --sort=-%cpu --no-headers | head -n 5"
-                output = subprocess.check_output(cmd, shell=True).decode('utf-8').strip().split('\n')
                 processes = []
-                for line in output:
-                    parts = line.split()
-                    if len(parts) >= 2:
-                        name = parts[0]
-                        cpu = parts[1]
-                        
+                
+                if TEST_MODE:
+                    # Simulació de processos
+                    demo_procs = ['chrome', 'code', 'spotify', 'Xorg', 'gnome-shell']
+                    for name in demo_procs:
+                        cpu = round(random.random() * 15, 1)
                         friendly_name = friendly_names.get(name, name)
-                        
-                        cpu_val = float(cpu)
-                        if cpu_val > 40.0:
-                            now = datetime.datetime.now().strftime("%H:%M:%S")
+                        processes.append({'name': friendly_name, 'cpu': str(cpu)})
+                    processes.sort(key=lambda x: float(x['cpu']), reverse=True)
+                else:
+                    # Obtenim els top 5 processos per CPU
+                    cmd = "ps -eo comm,%cpu --sort=-%cpu --no-headers | head -n 5"
+                    output = subprocess.check_output(cmd, shell=True).decode('utf-8').strip().split('\n')
+                    for line in output:
+                        parts = line.split()
+                        if len(parts) >= 2:
+                            name = parts[0]
+                            cpu = parts[1]
                             
-                            found = False
-                            for item in cpu_history:
-                                if item['name'] == friendly_name:
-                                    found = True
-                                    if cpu_val > float(item['cpu']):
-                                        item['cpu'] = cpu
-                                        item['time'] = now
-                                    break
+                            friendly_name = friendly_names.get(name, name)
                             
-                            if not found:
-                                cpu_history.append({
-                                    'name': friendly_name,
-                                    'orig_name': name,
-                                    'cpu': cpu,
-                                    'time': now
-                                })
-                                if len(cpu_history) > MAX_HISTORY:
-                                    cpu_history.sort(key=lambda x: float(x['cpu']), reverse=True)
-                                    cpu_history.pop()
+                            cpu_val = float(cpu)
+                            if cpu_val > 40.0:
+                                now = datetime.datetime.now().strftime("%H:%M:%S")
+                                
+                                found = False
+                                for item in cpu_history:
+                                    if item['name'] == friendly_name:
+                                        found = True
+                                        if cpu_val > float(item['cpu']):
+                                            item['cpu'] = cpu
+                                            item['time'] = now
+                                        break
+                                
+                                if not found:
+                                    cpu_history.append({
+                                        'name': friendly_name,
+                                        'orig_name': name,
+                                        'cpu': cpu,
+                                        'time': now
+                                    })
+                                    if len(cpu_history) > MAX_HISTORY:
+                                        cpu_history.sort(key=lambda x: float(x['cpu']), reverse=True)
+                                        cpu_history.pop()
 
-                        processes.append({'name': friendly_name, 'cpu': cpu})
+                            processes.append({'name': friendly_name, 'cpu': cpu})
                 
                 self.send_response(200)
                 self.send_header('Content-type', 'application/json')
                 self.end_headers()
-                self.wfile.write(json.dumps({'processes': processes}).encode())
+                self.wfile.write(json.dumps({'processes': processes, 'demo': TEST_MODE}).encode())
             except Exception as e:
                 self.send_response(500)
                 self.end_headers()
                 self.wfile.write(json.dumps({'error': str(e)}).encode())
-        elif self.path == '/api/history':
+        elif clean_path == '/api/history':
             try:
-                current_processes_raw = subprocess.check_output("ps -eo comm --no-headers", shell=True).decode('utf-8').strip().split('\n')
-                current_processes = [p.strip() for p in current_processes_raw]
-                
-                history_to_send = []
-                for item in cpu_history:
-                    is_active = False
-                    orig_name = item.get('orig_name', item['name'])
-                    if orig_name in current_processes:
-                        is_active = True
+                if TEST_MODE:
+                    history_to_send = cpu_history
+                else:
+                    current_processes_raw = subprocess.check_output("ps -eo comm --no-headers", shell=True).decode('utf-8').strip().split('\n')
+                    current_processes = [p.strip() for p in current_processes_raw]
                     
-                    item_copy = item.copy()
-                    item_copy['active'] = is_active
-                    history_to_send.append(item_copy)
+                    history_to_send = []
+                    for item in cpu_history:
+                        is_active = False
+                        orig_name = item.get('orig_name', item['name'])
+                        if orig_name in current_processes:
+                            is_active = True
+                        
+                        item_copy = item.copy()
+                        item_copy['active'] = is_active
+                        history_to_send.append(item_copy)
 
                 history_to_send.sort(key=lambda x: float(x['cpu']), reverse=True)
 
                 self.send_response(200)
                 self.send_header('Content-type', 'application/json')
                 self.end_headers()
-                self.wfile.write(json.dumps({'history': history_to_send}).encode())
+                self.wfile.write(json.dumps({'history': history_to_send, 'demo': TEST_MODE}).encode())
             except Exception as e:
                 self.send_response(500)
                 self.end_headers()
                 self.wfile.write(json.dumps({'error': str(e)}).encode())
-        elif self.path == '/api/cpu':
+        elif clean_path == '/api/cpu':
             try:
-                cores = int(subprocess.check_output("nproc", shell=True).decode('utf-8').strip())
-                total_cpu = subprocess.check_output("ps -eo %cpu --no-headers | awk '{s+=$1} END {print s}'", shell=True).decode('utf-8').strip()
-                usage_cores = float(total_cpu) / 100.0
+                if TEST_MODE:
+                    cores = 8
+                    usage_cores = 1.5 + random.random() * 2.0
+                else:
+                    cores = int(subprocess.check_output("nproc", shell=True).decode('utf-8').strip())
+                    total_cpu = subprocess.check_output("ps -eo %cpu --no-headers | awk '{s+=$1} END {print s}'", shell=True).decode('utf-8').strip()
+                    usage_cores = float(total_cpu) / 100.0
                 
                 self.send_response(200)
                 self.send_header('Content-type', 'application/json')
                 self.end_headers()
                 self.wfile.write(json.dumps({
                     'total_cores': cores,
-                    'used_cores': round(usage_cores, 2)
+                    'used_cores': round(usage_cores, 2),
+                    'demo': TEST_MODE
                 }).encode())
             except Exception as e:
                 self.send_response(500)
@@ -180,7 +208,7 @@ class TempHandler(http.server.SimpleHTTPRequestHandler):
             if path == '/':
                 path = '/inici.html'
             
-            # Serve files from the current directory (since we moved everything to the root)
+            # Serve files from the current directory
             filepath = os.path.join(os.getcwd(), path.lstrip('/'))
             
             if os.path.exists(filepath) and os.path.isfile(filepath):
@@ -197,13 +225,24 @@ class TempHandler(http.server.SimpleHTTPRequestHandler):
                 self.wfile.write(b"File not found")
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description='Monitor de temperatura del PC')
+    parser.add_argument('--test', '-t', action='store_true', help='Executa en mode prova amb dades simulades')
+    parser.add_argument('--port', '-p', type=int, default=3000, help='Port del servidor')
+    args = parser.parse_args()
+
+    PORT = args.port
+    TEST_MODE = args.test
+
     os.chdir(os.path.dirname(os.path.abspath(__file__)))
     socketserver.TCPServer.allow_reuse_address = True
+    
+    mode_str = " (MODE PROVA)" if TEST_MODE else ""
     with socketserver.TCPServer(("", PORT), TempHandler) as httpd:
-        print(f"Monitor de temperatura actiu a http://localhost:{PORT}")
+        print(f"Monitor de temperatura actiu a http://localhost:{PORT}{mode_str}")
         try:
             httpd.serve_forever()
         except KeyboardInterrupt:
             print("\nAturant el servidor...")
             httpd.server_close()
             sys.exit(0)
+

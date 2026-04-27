@@ -5,9 +5,11 @@ let demoDirection = 1; // Puja o baixa
 
 // Si obrim Inici.html normal o a GitHub Pages / Live Server, el port sol ser diferent a 3000.
 // Per tant, apuntem directament on corre el servidor en segon pla (http://127.0.0.1:3000).
-const API_BASE = (window.location.port === '3000' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'))
+const API_BASE = (window.location.port === '3000')
     ? '' 
-    : 'http://127.0.0.1:3000';
+    : `${window.location.protocol}//${window.location.hostname}:3000`;
+
+console.log("Connectant amb el servidor a:", API_BASE || "Port Local 3000");
 
 const tempValue = document.getElementById('temp-value');
 const tempMin = document.getElementById('temp-min');
@@ -51,15 +53,22 @@ function getDemoProcesses() {
 }
 
 function showDemoBanner() {
-    // El banner s'ha eliminat per petició de l'usuari
-    return;
+    let banner = document.getElementById('demo-banner');
+    if (!banner) {
+        banner = document.createElement('div');
+        banner.id = 'demo-banner';
+        banner.className = 'demo-banner';
+        banner.innerHTML = '⚠️ MODE SIMULACIÓ — Les dades són irreals! Assegura\'t de tenir obert el "run.sh" per llegir les reals.';
+        document.body.prepend(banner);
+        document.body.classList.add('has-banner');
+    }
 }
 
 function hideDemoBanner() {
     const banner = document.getElementById('demo-banner');
     if (banner) {
         banner.remove();
-        document.body.style.paddingTop = '0';
+        document.body.classList.remove('has-banner');
     }
 }
 
@@ -186,11 +195,18 @@ function applyCpuData(totalCores, usedCores) {
 // === FETCH REAL (SERVIDOR) ===
 async function fetchTemp() {
     try {
-        const response = await fetch(API_BASE + '/api/temp');
+        const response = await fetch(API_BASE + '/api/temp', { cache: "no-store" });
         if (!response.ok) throw new Error('Network response was not ok');
         const data = await response.json();
-        if (typeof data.temp === 'number') {
+        
+        // Si el servidor ens diu que està en mode demo, o si falla la connexió
+        if (data.demo === true) {
+            if (!demoMode) { demoMode = true; showDemoBanner(); }
+        } else {
             if (demoMode) { demoMode = false; hideDemoBanner(); }
+        }
+
+        if (typeof data.temp === 'number') {
             applyTempData(data.temp);
         }
     } catch (error) {
@@ -201,9 +217,9 @@ async function fetchTemp() {
 
 async function fetchProcesses() {
     try {
-        const response = await fetch(API_BASE + '/api/processes');
+        const response = await fetch(API_BASE + '/api/processes', { cache: "no-store" });
         const data = await response.json();
-        const cpuResponse = await fetch(API_BASE + '/api/cpu');
+        const cpuResponse = await fetch(API_BASE + '/api/cpu', { cache: "no-store" });
         const cpuData = await cpuResponse.json();
         const totalUsedCores = cpuData.used_cores || 0.1;
         if (data.processes) {
@@ -218,7 +234,7 @@ async function fetchProcesses() {
 
 async function fetchCpu() {
     try {
-        const response = await fetch(API_BASE + '/api/cpu');
+        const response = await fetch(API_BASE + '/api/cpu', { cache: "no-store" });
         const data = await response.json();
         if (data.total_cores) {
             applyCpuData(data.total_cores, data.used_cores);
@@ -238,7 +254,7 @@ const historyList = document.getElementById('history-list');
 
 async function fetchHistory() {
     try {
-        const response = await fetch(API_BASE + '/api/history');
+        const response = await fetch(API_BASE + '/api/history', { cache: "no-store" });
         const data = await response.json();
         if (data.history) {
             historyList.innerHTML = '';
