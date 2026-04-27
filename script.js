@@ -9,7 +9,27 @@ const API_BASE = (window.location.port === '3000')
     ? '' 
     : 'http://127.0.0.1:3000';
 
-console.log("Connectant amb el servidor a:", API_BASE || "Port Local 3000");
+console.log("Intentant connectar amb el servidor a:", API_BASE || "Port Local 3000");
+
+// Funció de fetch amb timeout i sense capçaleres que bloquegin
+async function smartFetch(url) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 2500);
+    
+    try {
+        const finalUrl = url + (url.includes('?') ? '&' : '?') + '_cache=' + Date.now();
+        const response = await fetch(finalUrl, { 
+            signal: controller.signal,
+            mode: 'cors',
+            credentials: 'omit'
+        });
+        clearTimeout(timeout);
+        return response;
+    } catch (e) {
+        clearTimeout(timeout);
+        throw e;
+    }
+}
 
 const tempValue = document.getElementById('temp-value');
 const tempMin = document.getElementById('temp-min');
@@ -195,7 +215,7 @@ function applyCpuData(totalCores, usedCores) {
 // === FETCH REAL (SERVIDOR) ===
 async function fetchTemp() {
     try {
-        const response = await fetch(API_BASE + '/api/temp', { cache: "no-store" });
+        const response = await smartFetch(API_BASE + '/api/temp');
         if (!response.ok) throw new Error('Network response was not ok');
         const data = await response.json();
         
@@ -217,11 +237,11 @@ async function fetchTemp() {
 
 async function fetchProcesses() {
     try {
-        const response = await fetch(API_BASE + '/api/processes', { cache: "no-store" });
+        const response = await smartFetch(API_BASE + '/api/processes');
         if (!response.ok) throw new Error('Network response was not ok');
         const data = await response.json();
         
-        const cpuResponse = await fetch(API_BASE + '/api/cpu', { cache: "no-store" });
+        const cpuResponse = await smartFetch(API_BASE + '/api/cpu');
         if (!cpuResponse.ok) throw new Error('Network response was not ok');
         const cpuData = await cpuResponse.json();
         
@@ -238,7 +258,7 @@ async function fetchProcesses() {
 
 async function fetchCpu() {
     try {
-        const response = await fetch(API_BASE + '/api/cpu', { cache: "no-store" });
+        const response = await smartFetch(API_BASE + '/api/cpu');
         if (!response.ok) throw new Error('Network response was not ok');
         const data = await response.json();
         if (data.total_cores) {
@@ -259,7 +279,7 @@ const historyList = document.getElementById('history-list');
 
 async function fetchHistory() {
     try {
-        const response = await fetch(API_BASE + '/api/history', { cache: "no-store" });
+        const response = await smartFetch(API_BASE + '/api/history');
         if (!response.ok) throw new Error('Network response was not ok');
         const data = await response.json();
         if (data.history) {

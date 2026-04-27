@@ -18,10 +18,11 @@ TEST_MODE = False
 
 class TempHandler(http.server.SimpleHTTPRequestHandler):
     def end_headers(self):
-        # CORS headers perquè qualsevol web (Local, Live Server, GitHub Pages) pugui llegir el servidor
+        # CORS per permetre que GitHub Pages demani dades a localhost
         self.send_header('Access-Control-Allow-Origin', '*')
         self.send_header('Access-Control-Allow-Methods', 'GET, OPTIONS')
-        self.send_header('Access-Control-Allow-Headers', 'Content-Type')
+        self.send_header('Access-Control-Allow-Headers', 'Content-Type, Cache-Control')
+        self.send_header('Access-Control-Max-Age', '86400')
         super().end_headers()
     
     def log_message(self, format, *args):
