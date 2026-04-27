@@ -36,23 +36,38 @@ class TempHandler(http.server.SimpleHTTPRequestHandler):
 
     def do_GET(self):
         clean_path = self.path.split('?')[0].rstrip('/')
+        is_windows = sys.platform.startswith('win')
+
         if clean_path == '/api/temp':
             try:
                 if TEST_MODE:
-                    # Simulació de temperatura
                     temp = round(40 + random.random() * 30, 1)
                 else:
-                    # Usem la comanda exacta: cat /sys/class/thermal/thermal_zone0/temp | awk '{print $1/1000}'
                     temp = None
-                    for i in range(5):  # Provem zones 0-4
-                        path = f"/sys/class/thermal/thermal_zone{i}/temp"
-                        if os.path.exists(path):
-                            cmd = f"cat {path} | awk '{{print $1/1000}}'"
+                    if is_windows:
+                        # Windows: Provar via PowerShell i WMI
+                        try:
+                            cmd = "powershell -NoProfile -Command \"(Get-CimInstance -Namespace root/wmi -ClassName MsAcpi_ThermalZoneTemperature).CurrentTemperature\""
                             raw = subprocess.check_output(cmd, shell=True).decode('utf-8').strip()
-                            temp = float(raw)
-                            break
+                            if raw:
+                                # El valor és en dècims de Kelvin: (K * 10)
+                                temp = (float(raw.split()[0]) / 10.0) - 273.15
+                        except:
+                            pass
+                    else:
+                        # Linux
+                        for i in range(5):
+                            path = f"/sys/class/thermal/thermal_zone{i}/temp"
+                            if os.path.exists(path):
+                                cmd = f"cat {path} | awk '{{print $1/1000}}'"
+                                raw = subprocess.check_output(cmd, shell=True).decode('utf-8').strip()
+                                temp = float(raw)
+                                break
 
                     if temp is None:
+                        # Si falla el sensor real en Windows/Linux, posem un valor de seguretat o error
+                        if is_windows:
+                            raise Exception("No s'ha pogut llegir la temperatura. A Windows calen permisos d'Administrador o sensors compatibles.")
                         raise Exception("No s'ha trobat cap sensor de temperatura compatible")
 
                 self.send_response(200)
@@ -64,158 +79,102 @@ class TempHandler(http.server.SimpleHTTPRequestHandler):
                 self.send_header('Content-type', 'application/json')
                 self.end_headers()
                 self.wfile.write(json.dumps({'error': str(e)}).encode())
+
         elif clean_path == '/api/processes':
             try:
-                # Diccionari de noms amigables
                 friendly_names = {
-                    'chrome': 'Navegador (Chrome)',
-                    'chromium': 'Navegador (Chromium)',
-                    'firefox': 'Navegador (Firefox)',
-                    'DisplayLinkMana': 'Pantalles Externes',
-                    'DisplayLinkManager': 'Pantalles Externes',
-                    'python3': 'Aquesta Web (Servidor)',
-                    'ps': 'Monitoritzant...',
-                    'Xorg': 'Sistema Gràfic (X11)',
-                    'gnome-shell': 'Interfície del Sistema',
-                    'cinnamon': 'Escriptori (Cinnamon)',
-                    'code': 'Visual Studio Code',
-                    'slack': 'Slack',
-                    'spotify': 'Spotify',
-                    'discord': 'Discord',
-                    'systemd': 'Sistema Base',
-                    'node': 'Node.js (App)',
-                    'antigravity': 'Assistent Antigravity',
-                    'resourcemanager': 'Gestor de Recursos',
-                    'language_server': 'Servidor de Llenguatge (IDE)',
-                    'bash': 'Terminal (Bash)',
-                    'zsh': 'Terminal (Zsh)',
-                    'sh': 'Terminal',
-                    'docker': 'Docker',
-                    'dockerd': 'Servei de Docker',
-                    'containerd': 'Gestor de Contenidors',
-                    'rust-analyzer': 'Analitzador de Rust',
-                    'git': 'Git (Control de versions)'
+                    'chrome': 'Navegador (Chrome)', 'chromium': 'Navegador (Chromium)', 'firefox': 'Navegador (Firefox)',
+                    'msedge': 'Navegador (Edge)', 'python': 'Aquesta Web (Servidor)', 'python3': 'Aquesta Web (Servidor)',
+                    'Code': 'Visual Studio Code', 'explorer': 'Explorador de Fitxers', 'Taskmgr': 'Administrador de Tasques'
                 }
 
                 processes = []
-                
                 if TEST_MODE:
-                    # Simulació de processos
-                    demo_procs = ['chrome', 'code', 'spotify', 'Xorg', 'gnome-shell']
+                    demo_procs = ['chrome', 'Code', 'spotify', 'explorer']
                     for name in demo_procs:
                         cpu = round(random.random() * 15, 1)
-                        friendly_name = friendly_names.get(name, name)
-                        processes.append({'name': friendly_name, 'cpu': str(cpu)})
-                    processes.sort(key=lambda x: float(x['cpu']), reverse=True)
+                        processes.append({'name': friendly_names.get(name, name), 'cpu': str(cpu)})
                 else:
-                    # Obtenim més processos per poder-los agrupar per nom amigable
-                    cmd = "ps -eo comm,%cpu --sort=-%cpu --no-headers | head -n 30"
-                    output = subprocess.check_output(cmd, shell=True).decode('utf-8').strip().split('\n')
-                    
-                    grouped_data = {} # nom_amigable -> {cpu, orig_name}
-                    
-                    for line in output:
-                        parts = line.split()
-                        if len(parts) >= 2:
-                            name = parts[0]
-                            cpu_val = float(parts[1])
-                            friendly_name = friendly_names.get(name, name)
-                            
-                            if friendly_name not in grouped_data:
-                                grouped_data[friendly_name] = {'cpu': 0.0, 'orig': name}
-                            grouped_data[friendly_name]['cpu'] += cpu_val
+                    if is_windows:
+                        # Windows: PowerShell Get-Process
+                        cmd = "powershell -NoProfile -Command \"Get-Process | Sort-Object CPU -Descending | Select-Object -First 20 -Property Name, @{Name='CPU';Expression={$_.CPU / (Get-Date).Subtract($_.StartTime).TotalSeconds * 100}} | ConvertTo-Json\""
+                        try:
+                            raw = subprocess.check_output(cmd, shell=True).decode('utf-8')
+                            data = json.loads(raw)
+                            if not isinstance(data, list): data = [data]
+                            for p in data:
+                                name = p.get('Name', 'Unknown')
+                                cpu_val = p.get('CPU') or 0.0
+                                f_name = friendly_names.get(name, name)
+                                processes.append({'name': f_name, 'cpu': str(round(float(cpu_val), 1)), 'orig': name})
+                        except:
+                            processes = [{'name': 'Error llegint processos', 'cpu': '0'}]
+                    else:
+                        # Linux
+                        cmd = "ps -eo comm,%cpu --sort=-%cpu --no-headers | head -n 30"
+                        output = subprocess.check_output(cmd, shell=True).decode('utf-8').strip().split('\n')
+                        grouped_data = {}
+                        for line in output:
+                            parts = line.split()
+                            if len(parts) >= 2:
+                                name, cpu_val = parts[0], float(parts[1])
+                                f_name = friendly_names.get(name, name)
+                                if f_name not in grouped_data: grouped_data[f_name] = {'cpu': 0.0, 'orig': name}
+                                grouped_data[f_name]['cpu'] += cpu_val
 
-                    # Processem l'historial i preparem la llista final
-                    now = datetime.datetime.now().strftime("%H:%M:%S")
-                    final_list = []
-                    
-                    for f_name, data in grouped_data.items():
-                        total_cpu = data['cpu']
-                        orig_name = data['orig']
-                        
-                        # Actualitzem historial si el conjunt consumeix més del 40%
-                        if total_cpu > 40.0:
-                            found = False
-                            for item in cpu_history:
-                                if item['name'] == f_name:
-                                    found = True
-                                    if total_cpu > float(item['cpu']):
-                                        item['cpu'] = str(round(total_cpu, 1))
-                                        item['time'] = now
-                                    break
-                            
-                            if not found:
-                                cpu_history.append({
-                                    'name': f_name,
-                                    'orig_name': orig_name,
-                                    'cpu': str(round(total_cpu, 1)),
-                                    'time': now
-                                })
-                                if len(cpu_history) > MAX_HISTORY:
-                                    cpu_history.sort(key=lambda x: float(x['cpu']), reverse=True)
-                                    cpu_history.pop()
+                        for f_name, data in grouped_data.items():
+                            total_cpu = data['cpu']
+                            now = datetime.datetime.now().strftime("%H:%M:%S")
+                            if total_cpu > 40.0:
+                                found = False
+                                for item in cpu_history:
+                                    if item['name'] == f_name:
+                                        found = True
+                                        if total_cpu > float(item['cpu']):
+                                            item['cpu'] = str(round(total_cpu, 1))
+                                            item['time'] = now
+                                        break
+                                if not found:
+                                    cpu_history.append({'name': f_name, 'orig_name': data['orig'], 'cpu': str(round(total_cpu, 1)), 'time': now})
+                                    if len(cpu_history) > MAX_HISTORY:
+                                        cpu_history.sort(key=lambda x: float(x['cpu']), reverse=True)
+                                        cpu_history.pop()
+                            processes.append({'name': f_name, 'cpu': str(round(total_cpu, 1))})
 
-                        final_list.append({'name': f_name, 'cpu': str(round(total_cpu, 1))})
-                    
-                    # Ordenem per consum total i agafem els top 5
-                    final_list.sort(key=lambda x: float(x['cpu']), reverse=True)
-                    processes = final_list[:5]
-                
+                processes.sort(key=lambda x: float(x['cpu']), reverse=True)
                 self.send_response(200)
                 self.send_header('Content-type', 'application/json')
                 self.end_headers()
-                self.wfile.write(json.dumps({'processes': processes, 'demo': TEST_MODE}).encode())
+                self.wfile.write(json.dumps({'processes': processes[:5], 'demo': TEST_MODE}).encode())
             except Exception as e:
                 self.send_response(500)
                 self.end_headers()
                 self.wfile.write(json.dumps({'error': str(e)}).encode())
+
         elif clean_path == '/api/history':
-            try:
-                if TEST_MODE:
-                    history_to_send = cpu_history
-                else:
-                    current_processes_raw = subprocess.check_output("ps -eo comm --no-headers", shell=True).decode('utf-8').strip().split('\n')
-                    current_processes = [p.strip() for p in current_processes_raw]
-                    
-                    history_to_send = []
-                    for item in cpu_history:
-                        is_active = False
-                        orig_name = item.get('orig_name', item['name'])
-                        if orig_name in current_processes:
-                            is_active = True
-                        
-                        item_copy = item.copy()
-                        item_copy['active'] = is_active
-                        history_to_send.append(item_copy)
+            self.send_response(200)
+            self.send_header('Content-type', 'application/json')
+            self.end_headers()
+            self.wfile.write(json.dumps({'history': cpu_history, 'demo': TEST_MODE}).encode())
 
-                history_to_send.sort(key=lambda x: float(x['cpu']), reverse=True)
-
-                self.send_response(200)
-                self.send_header('Content-type', 'application/json')
-                self.end_headers()
-                self.wfile.write(json.dumps({'history': history_to_send, 'demo': TEST_MODE}).encode())
-            except Exception as e:
-                self.send_response(500)
-                self.end_headers()
-                self.wfile.write(json.dumps({'error': str(e)}).encode())
         elif clean_path == '/api/cpu':
             try:
+                cores = os.cpu_count()
                 if TEST_MODE:
-                    cores = 8
                     usage_cores = 1.5 + random.random() * 2.0
                 else:
-                    cores = int(subprocess.check_output("nproc", shell=True).decode('utf-8').strip())
-                    total_cpu = subprocess.check_output("ps -eo %cpu --no-headers | awk '{s+=$1} END {print s}'", shell=True).decode('utf-8').strip()
-                    usage_cores = float(total_cpu) / 100.0
+                    if is_windows:
+                        cmd = "powershell -NoProfile -Command \"(Get-CimInstance Win32_Processor).LoadPercentage\""
+                        raw = subprocess.check_output(cmd, shell=True).decode('utf-8').strip()
+                        usage_cores = (float(raw) / 100.0) * cores if raw else 0.1
+                    else:
+                        total_cpu = subprocess.check_output("ps -eo %cpu --no-headers | awk '{s+=$1} END {print s}'", shell=True).decode('utf-8').strip()
+                        usage_cores = float(total_cpu) / 100.0
                 
                 self.send_response(200)
                 self.send_header('Content-type', 'application/json')
                 self.end_headers()
-                self.wfile.write(json.dumps({
-                    'total_cores': cores,
-                    'used_cores': round(usage_cores, 2),
-                    'demo': TEST_MODE
-                }).encode())
+                self.wfile.write(json.dumps({'total_cores': cores, 'used_cores': round(usage_cores, 2), 'demo': TEST_MODE}).encode())
             except Exception as e:
                 self.send_response(500)
                 self.end_headers()

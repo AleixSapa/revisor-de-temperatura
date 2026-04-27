@@ -84,7 +84,7 @@ function showDemoBanner() {
         banner = document.createElement('div');
         banner.id = 'demo-banner';
         banner.className = 'demo-banner';
-        banner.innerHTML = `⚠️ MODE SIMULACIÓ — Les dades són irreals! <a href="#" id="config-ip" style="color: white; text-decoration: underline; margin-left: 10px;">Configurar IP del PC</a>`;
+        banner.innerHTML = `⚠️ MODE SIMULACIÓ — Les dades són irreals! Assegura't de tenir obert el "run.sh" (o "run.bat" a Windows). <a href="#" id="config-ip" style="color: white; text-decoration: underline; margin-left: 10px;">Configurar IP</a>`;
         document.body.prepend(banner);
         document.body.classList.add('has-banner');
 
