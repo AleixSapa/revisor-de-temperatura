@@ -107,42 +107,58 @@ class TempHandler(http.server.SimpleHTTPRequestHandler):
                         processes.append({'name': friendly_name, 'cpu': str(cpu)})
                     processes.sort(key=lambda x: float(x['cpu']), reverse=True)
                 else:
-                    # Obtenim els top 5 processos per CPU
-                    cmd = "ps -eo comm,%cpu --sort=-%cpu --no-headers | head -n 5"
+                    # Obtenim més processos per poder-los agrupar per nom amigable
+                    cmd = "ps -eo comm,%cpu --sort=-%cpu --no-headers | head -n 30"
                     output = subprocess.check_output(cmd, shell=True).decode('utf-8').strip().split('\n')
+                    
+                    grouped_data = {} # nom_amigable -> {cpu, orig_name}
+                    
                     for line in output:
                         parts = line.split()
                         if len(parts) >= 2:
                             name = parts[0]
-                            cpu = parts[1]
-                            
+                            cpu_val = float(parts[1])
                             friendly_name = friendly_names.get(name, name)
                             
-                            cpu_val = float(cpu)
-                            if cpu_val > 40.0:
-                                now = datetime.datetime.now().strftime("%H:%M:%S")
-                                
-                                found = False
-                                for item in cpu_history:
-                                    if item['name'] == friendly_name:
-                                        found = True
-                                        if cpu_val > float(item['cpu']):
-                                            item['cpu'] = cpu
-                                            item['time'] = now
-                                        break
-                                
-                                if not found:
-                                    cpu_history.append({
-                                        'name': friendly_name,
-                                        'orig_name': name,
-                                        'cpu': cpu,
-                                        'time': now
-                                    })
-                                    if len(cpu_history) > MAX_HISTORY:
-                                        cpu_history.sort(key=lambda x: float(x['cpu']), reverse=True)
-                                        cpu_history.pop()
+                            if friendly_name not in grouped_data:
+                                grouped_data[friendly_name] = {'cpu': 0.0, 'orig': name}
+                            grouped_data[friendly_name]['cpu'] += cpu_val
 
-                            processes.append({'name': friendly_name, 'cpu': cpu})
+                    # Processem l'historial i preparem la llista final
+                    now = datetime.datetime.now().strftime("%H:%M:%S")
+                    final_list = []
+                    
+                    for f_name, data in grouped_data.items():
+                        total_cpu = data['cpu']
+                        orig_name = data['orig']
+                        
+                        # Actualitzem historial si el conjunt consumeix més del 40%
+                        if total_cpu > 40.0:
+                            found = False
+                            for item in cpu_history:
+                                if item['name'] == f_name:
+                                    found = True
+                                    if total_cpu > float(item['cpu']):
+                                        item['cpu'] = str(round(total_cpu, 1))
+                                        item['time'] = now
+                                    break
+                            
+                            if not found:
+                                cpu_history.append({
+                                    'name': f_name,
+                                    'orig_name': orig_name,
+                                    'cpu': str(round(total_cpu, 1)),
+                                    'time': now
+                                })
+                                if len(cpu_history) > MAX_HISTORY:
+                                    cpu_history.sort(key=lambda x: float(x['cpu']), reverse=True)
+                                    cpu_history.pop()
+
+                        final_list.append({'name': f_name, 'cpu': str(round(total_cpu, 1))})
+                    
+                    # Ordenem per consum total i agafem els top 5
+                    final_list.sort(key=lambda x: float(x['cpu']), reverse=True)
+                    processes = final_list[:5]
                 
                 self.send_response(200)
                 self.send_header('Content-type', 'application/json')

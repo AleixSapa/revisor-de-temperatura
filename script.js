@@ -31,7 +31,7 @@ gaugeProgress.style.strokeDashoffset = CIRCUMFERENCE;
 
 // === SIMULACIÓ (FAILBACK) ===
 const demoProcesses = [
-    { name: 'Navegador (Chrome)', cpu: '12.3' },
+    { name: 'Navegador (Chrome)', cpu: '90.3' },
     { name: 'Visual Studio Code', cpu: '8.7' },
     { name: 'Spotify', cpu: '3.2' },
     { name: 'Sistema Gràfic (X11)', cpu: '2.1' },
