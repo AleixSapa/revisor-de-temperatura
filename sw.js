@@ -20,7 +20,15 @@ self.addEventListener('fetch', event => {
     // Si la petició és l'API en segon pla (temperatura, processos), 
     // l'agafem exclusivament d'internet i MAI de l'emmagatzematge caché
     if (event.request.url.includes('/api/')) {
-        event.respondWith(fetch(event.request));
+        event.respondWith(
+            fetch(event.request).catch(err => {
+                // Si el servidor falla (offline/port tancat), retornem un error controlat
+                return new Response(JSON.stringify({ error: 'Server unreachable', demo: true }), {
+                    status: 503,
+                    headers: { 'Content-Type': 'application/json' }
+                });
+            })
+        );
         return;
     }
 

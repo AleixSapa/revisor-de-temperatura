@@ -7,7 +7,7 @@ let demoDirection = 1; // Puja o baixa
 // Per tant, apuntem directament on corre el servidor en segon pla (http://127.0.0.1:3000).
 const API_BASE = (window.location.port === '3000')
     ? '' 
-    : `${window.location.protocol}//${window.location.hostname}:3000`;
+    : 'http://127.0.0.1:3000';
 
 console.log("Connectant amb el servidor a:", API_BASE || "Port Local 3000");
 
@@ -218,9 +218,13 @@ async function fetchTemp() {
 async function fetchProcesses() {
     try {
         const response = await fetch(API_BASE + '/api/processes', { cache: "no-store" });
+        if (!response.ok) throw new Error('Network response was not ok');
         const data = await response.json();
+        
         const cpuResponse = await fetch(API_BASE + '/api/cpu', { cache: "no-store" });
+        if (!cpuResponse.ok) throw new Error('Network response was not ok');
         const cpuData = await cpuResponse.json();
+        
         const totalUsedCores = cpuData.used_cores || 0.1;
         if (data.processes) {
             applyProcessData(data.processes, totalUsedCores);
@@ -235,6 +239,7 @@ async function fetchProcesses() {
 async function fetchCpu() {
     try {
         const response = await fetch(API_BASE + '/api/cpu', { cache: "no-store" });
+        if (!response.ok) throw new Error('Network response was not ok');
         const data = await response.json();
         if (data.total_cores) {
             applyCpuData(data.total_cores, data.used_cores);
@@ -255,6 +260,7 @@ const historyList = document.getElementById('history-list');
 async function fetchHistory() {
     try {
         const response = await fetch(API_BASE + '/api/history', { cache: "no-store" });
+        if (!response.ok) throw new Error('Network response was not ok');
         const data = await response.json();
         if (data.history) {
             historyList.innerHTML = '';
