@@ -3,13 +3,19 @@ let demoMode = false;
 let demoTemp = 45; // Temperatura Inicial simulada
 let demoDirection = 1; // Puja o baixa
 
-// Si obrim Inici.html normal o a GitHub Pages / Live Server, el port sol ser diferent a 3000.
-// Per tant, apuntem directament on corre el servidor en segon pla (http://127.0.0.1:3000).
-const API_BASE = (window.location.port === '3000')
-    ? '' 
-    : 'http://127.0.0.1:3000';
+// === CONFIGURACIÓ DE L'IP DEL SERVIDOR ===
+let API_BASE = localStorage.getItem('server_ip') || '';
+
+// Si estem al port 3000, ja estem al servidor, usem rutes relatives.
+if (window.location.port === '3000') {
+    API_BASE = '';
+} else if (!API_BASE) {
+    // Si no tenim IP guardada i no estem al port 3000, provem localhost (per defecte)
+    API_BASE = 'http://127.0.0.1:3000';
+}
 
 console.log("Intentant connectar amb el servidor a:", API_BASE || "Port Local 3000");
+
 
 // Funció de fetch amb timeout i sense capçaleres que bloquegin
 async function smartFetch(url) {
@@ -78,9 +84,19 @@ function showDemoBanner() {
         banner = document.createElement('div');
         banner.id = 'demo-banner';
         banner.className = 'demo-banner';
-        banner.innerHTML = '⚠️ MODE SIMULACIÓ — Les dades són irreals! Assegura\'t de tenir obert el "run.sh" per llegir les reals.';
+        banner.innerHTML = `⚠️ MODE SIMULACIÓ — Les dades són irreals! <a href="#" id="config-ip" style="color: white; text-decoration: underline; margin-left: 10px;">Configurar IP del PC</a>`;
         document.body.prepend(banner);
         document.body.classList.add('has-banner');
+
+        // Afegim event listener al link
+        document.getElementById('config-ip').addEventListener('click', (e) => {
+            e.preventDefault();
+            const newIp = prompt("Introdueix l'IP del teu ordinador (ex: http://192.168.1.43:3000):", API_BASE);
+            if (newIp) {
+                localStorage.setItem('server_ip', newIp);
+                window.location.reload();
+            }
+        });
     }
 }
 
