@@ -532,16 +532,19 @@ footer {
     right: 0;
     background: var(--warning);
     color: #000;
-    padding: 0.5rem;
+    padding: 0.75rem 1rem;
     text-align: center;
-    font-size: 0.8rem;
+    font-size: 0.85rem;
     font-weight: 800;
     z-index: 9999;
     box-shadow: 0 4px 15px rgba(0,0,0,0.3);
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
+    letter-spacing: 0.05em;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 2.5rem;
 }
 
 body.has-banner {
-    padding-top: 2.5rem;
+    padding-top: 4rem;
 }

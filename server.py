@@ -45,47 +45,94 @@ class TempHandler(http.server.SimpleHTTPRequestHandler):
                 else:
                     temp = None
                     if is_windows:
-                        # Windows: Provar via PowerShell i WMI
+                        # Windows: Provar multiples mètodes (WMI)
                         try:
+                            # Mètode 1: MS Acquire Thermal Zone
                             cmd = "powershell -NoProfile -Command \"(Get-CimInstance -Namespace root/wmi -ClassName MsAcpi_ThermalZoneTemperature).CurrentTemperature\""
                             raw = subprocess.check_output(cmd, shell=True).decode('utf-8').strip()
                             if raw:
-                                # El valor és en dècims de Kelvin: (K * 10)
                                 temp = (float(raw.split()[0]) / 10.0) - 273.15
+                            
+                            if temp is None:
+                                # Mètode 2: Objectes de rendiment del sistema
+                                cmd = "powershell -NoProfile -Command \"(Get-Counter '\\Thermal Zone Information(*)\\Temperature').CounterSamples.CookedValue\""
+                                raw = subprocess.check_output(cmd, shell=True).decode('utf-8').strip()
+                                if raw:
+                                    temp = float(raw.split()[0]) - 273.15
                         except:
                             pass
                     else:
-                        # Linux
-                        for i in range(5):
+                        # Linux: Provar thermal_zones i hwmon
+                        # Thermal zones
+                        for i in range(10):
                             path = f"/sys/class/thermal/thermal_zone{i}/temp"
                             if os.path.exists(path):
-                                cmd = f"cat {path} | awk '{{print $1/1000}}'"
-                                raw = subprocess.check_output(cmd, shell=True).decode('utf-8').strip()
-                                temp = float(raw)
-                                break
+                                try:
+                                    with open(path, 'r') as f:
+                                        temp = float(f.read().strip()) / 1000.0
+                                    # Evitem zones de seguretat o valors estranys (< 5 o > 120)
+                                    if 5 < temp < 120:
+                                        break
+                                    else:
+                                        temp = None
+                                except:
+                                    continue
+                        
+                        # Si falla, provar hwmon (sensors de CPU reals)
+                        if temp is None:
+                            for i in range(10):
+                                for j in range(10):
+                                    path = f"/sys/class/hwmon/hwmon{i}/temp{j}_input"
+                                    if os.path.exists(path):
+                                        try:
+                                            with open(path, 'r') as f:
+                                                temp = float(f.read().strip()) / 1000.0
+                                            if 5 < temp < 120:
+                                                break
+                                            else:
+                                                temp = None
+                                        except:
+                                            continue
+                                if temp is not None: break
 
                     if temp is None:
                         # Si falla el sensor real en Windows/Linux, posem un valor de seguretat o error
                         if is_windows:
-                            raise Exception("No s'ha pogut llegir la temperatura. A Windows calen permisos d'Administrador o sensors compatibles.")
-                        raise Exception("No s'ha trobat cap sensor de temperatura compatible")
+                            raise Exception("No s'ha pogut llegir la temperatura. Revisa si tens sensors compatibles i permisos d'Administrador.")
+                        raise Exception("No s'ha trobat cap sensor de temperatura compatible (Thermal Zone/Hwmon) a Linux.")
 
                 self.send_response(200)
                 self.send_header('Content-type', 'application/json')
                 self.end_headers()
-                self.wfile.write(json.dumps({'temp': temp, 'unit': '°C', 'demo': TEST_MODE}).encode())
+                res = {
+                    'temp': temp, 
+                    'unit': '°C', 
+                    'demo': TEST_MODE,
+                    'os': 'windows' if is_windows else 'linux',
+                    'run_cmd': 'Inicia Monitor.bat' if is_windows else 'linux_extras/run.sh'
+                }
+                self.wfile.write(json.dumps(res).encode())
             except Exception as e:
-                self.send_response(500)
+                self.send_response(200) # Enviem 200 però amb error per permetre al frontend mostrar el banner correctament
                 self.send_header('Content-type', 'application/json')
                 self.end_headers()
-                self.wfile.write(json.dumps({'error': str(e)}).encode())
+                self.wfile.write(json.dumps({
+                    'error': str(e), 
+                    'demo': True,
+                    'os': 'windows' if is_windows else 'linux',
+                    'run_cmd': 'Inicia Monitor.bat' if is_windows else 'linux_extras/run.sh'
+                }).encode())
 
         elif clean_path == '/api/processes':
             try:
                 friendly_names = {
-                    'chrome': 'Navegador (Chrome)', 'chromium': 'Navegador (Chromium)', 'firefox': 'Navegador (Firefox)',
-                    'msedge': 'Navegador (Edge)', 'python': 'Aquesta Web (Servidor)', 'python3': 'Aquesta Web (Servidor)',
-                    'Code': 'Visual Studio Code', 'explorer': 'Explorador de Fitxers', 'Taskmgr': 'Administrador de Tasques'
+                    'chrome': 'Chrome', 'chromium': 'Chromium', 'firefox': 'Firefox',
+                    'msedge': 'Edge', 'python': 'Servidor Monitor', 'python3': 'Servidor Monitor',
+                    'Code': 'VS Code', 'explorer': 'Explorador', 'Taskmgr': 'Admin. Tasques',
+                    'spotify': 'Spotify', 'discord': 'Discord', 'steam': 'Steam',
+                    'vlc': 'VLC Media Player', 'slack': 'Slack', 'zoom': 'Zoom',
+                    'Xorg': 'Sistema Gr\xc3\xa0fic', 'gnome-shell': 'Escriptori (GNOME)',
+                    'cinnamon': 'Escriptori (Cinnamon)', 'plasmashell': 'Escriptori (KDE)'
                 }
 
                 processes = []
@@ -180,13 +227,20 @@ class TempHandler(http.server.SimpleHTTPRequestHandler):
                 self.end_headers()
                 self.wfile.write(json.dumps({'error': str(e)}).encode())
         else:
-            path = self.path
+            path = self.path.split('?')[0]
             if path == '/':
                 path = '/inici.html'
             
-            # Serve files from the current directory
-            filepath = os.path.join(os.getcwd(), path.lstrip('/'))
+            # Seguretat: Validació de camins per evitar Directory Traversal
+            base_dir = os.getcwd()
+            filepath = os.path.normpath(os.path.join(base_dir, path.lstrip('/')))
             
+            if not filepath.startswith(base_dir):
+                self.send_response(403)
+                self.end_headers()
+                self.wfile.write(b"Acci\xc3\xb3 denegada")
+                return
+
             if os.path.exists(filepath) and os.path.isfile(filepath):
                 self.send_response(200)
                 if filepath.endswith(".html"): self.send_header('Content-type', 'text/html')
@@ -214,7 +268,8 @@ if __name__ == "__main__":
     
     mode_str = " (MODE PROVA)" if TEST_MODE else ""
     with socketserver.TCPServer(("", PORT), TempHandler) as httpd:
-        print(f"Monitor de temperatura actiu a http://localhost:{PORT}{mode_str}")
+        print(f"✅ Servidor de Monitorització Actiu{mode_str}")
+
         try:
             httpd.serve_forever()
         except KeyboardInterrupt:

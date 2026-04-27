@@ -1,20 +1,17 @@
-// === MODE SIMULACIÓ (NOMÉS SI EL SERVIDOR NO RESPON) ===
-let demoMode = false;
-let demoTemp = 45; // Temperatura Inicial simulada
-let demoDirection = 1; // Puja o baixa
+// === CONFIGURACIÓ DEL SERVIDOR ===
+let API_BASE = '';
+let currentHost = 'localhost';
 
-// === CONFIGURACIÓ DE L'IP DEL SERVIDOR ===
-let API_BASE = localStorage.getItem('server_ip') || '';
-
-// Si estem al port 3000, ja estem al servidor, usem rutes relatives.
-if (window.location.port === '3000') {
-    API_BASE = '';
-} else if (!API_BASE) {
-    // Si no tenim IP guardada i no estem al port 3000, provem localhost (per defecte)
-    API_BASE = 'http://127.0.0.1:3000';
+if (window.location.port !== '3000') {
+    API_BASE = 'http://localhost:3000';
 }
 
-console.log("Intentant connectar amb el servidor a:", API_BASE || "Port Local 3000");
+// === MODE SIMULACIÓ (NOMÉS SI EL SERVIDOR NO RESPON) ===
+let demoMode = false;
+let demoTemp = 45; 
+let demoDirection = 1; 
+
+console.log("Connectant amb el servidor de monitorització...");
 
 
 // Funció de fetch amb timeout i sense capçaleres que bloquegin
@@ -78,25 +75,29 @@ function getDemoProcesses() {
     }));
 }
 
-function showDemoBanner() {
+function showDemoBanner(customMessage, runCmd) {
     let banner = document.getElementById('demo-banner');
     if (!banner) {
         banner = document.createElement('div');
         banner.id = 'demo-banner';
         banner.className = 'demo-banner';
-        banner.innerHTML = `⚠️ MODE SIMULACIÓ — Les dades són irreals! Assegura't de tenir obert el "run.sh" (o "run.bat" a Windows). <a href="#" id="config-ip" style="color: white; text-decoration: underline; margin-left: 10px;">Configurar IP</a>`;
         document.body.prepend(banner);
         document.body.classList.add('has-banner');
-
-        // Afegim event listener al link
-        document.getElementById('config-ip').addEventListener('click', (e) => {
-            e.preventDefault();
-            const newIp = prompt("Introdueix l'IP del teu ordinador (ex: http://192.168.1.43:3000):", API_BASE);
-            if (newIp) {
-                localStorage.setItem('server_ip', newIp);
-                window.location.reload();
-            }
-        });
+    }
+    
+    // Si el missatge és l'error genèric o buit, mostrem la instrucció de recuperació
+    if (!customMessage || customMessage.includes('unreachable') || customMessage.includes('fail')) {
+        const cmd = runCmd || (navigator.platform.toLowerCase().includes('win') ? 'Inicia Monitor.bat' : 'Inicia Monitor.sh');
+        banner.innerHTML = `
+            <div style="display: flex; flex-direction: column; gap: 4px;">
+                <span>⚠️ DADES SIMULADES — Cal executar "<span style="text-decoration: underline;">${cmd}</span>" per veure dades reals.</span>
+                <small style="opacity: 0.85; font-size: 0.75rem; font-weight: 400;">
+                    Nota: La lectura de sensors pot variar segons el sistema. Si el servidor corre però no veus dades, revisa els permisos o compatibilitat de sensors.
+                </small>
+            </div>
+        `;
+    } else {
+        banner.innerHTML = customMessage;
     }
 }
 
@@ -232,12 +233,20 @@ function applyCpuData(totalCores, usedCores) {
 async function fetchTemp() {
     try {
         const response = await smartFetch(API_BASE + '/api/temp');
-        if (!response.ok) throw new Error('Network response was not ok');
         const data = await response.json();
         
-        // Si el servidor ens diu que està en mode demo, o si falla la connexió
+        if (data.error) {
+            showDemoBanner("⚠️ " + data.error);
+            applyTempData(getDemoTemp());
+            return;
+        }
+
+        // Si el servidor ens diu que està en mode demo
         if (data.demo === true) {
-            if (!demoMode) { demoMode = true; showDemoBanner(); }
+            if (!demoMode) { 
+                demoMode = true; 
+                showDemoBanner(null, data.run_cmd); 
+            }
         } else {
             if (demoMode) { demoMode = false; hideDemoBanner(); }
         }
@@ -246,6 +255,13 @@ async function fetchTemp() {
             applyTempData(data.temp);
         }
     } catch (error) {
+        // Fallback: si falla localhost, provem 127.0.0.1 (i viceversa)
+        if (API_BASE.includes('localhost')) {
+            API_BASE = API_BASE.replace('localhost', '127.0.0.1');
+        } else if (API_BASE.includes('127.0.0.1')) {
+            API_BASE = API_BASE.replace('127.0.0.1', 'localhost');
+        }
+
         if (!demoMode) { demoMode = true; showDemoBanner(); }
         applyTempData(getDemoTemp());
     }

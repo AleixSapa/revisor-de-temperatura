@@ -10,8 +10,8 @@ fi
 # Atura qualsevol instància anterior per evitar conflictes de port
 pkill -f 'python3 server.py' > /dev/null 2>&1
 
-# Executa en segon pla immune al tancament de la terminal
-nohup python3 server.py $ARGS > serve.log 2>&1 &
+# Executa en segon pla immune al tancament de la terminal (buscant server.py a la carpeta superior)
+nohup python3 ../server.py $ARGS > ../serve.log 2>&1 &
 
 if [[ "$ARGS" == "--test" ]]; then
     echo "✅ Servidor Iniciat en MODE DE PROVA!"
