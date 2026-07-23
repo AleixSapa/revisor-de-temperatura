@@ -1,45 +1,45 @@
 // === CONFIGURACIÓ DEL SERVIDOR ===
-let API_BASE = '';
-let currentHost = 'localhost';
+let API_BASE = "";
+let currentHost = "localhost";
 
-if (window.location.port !== '3000') {
-    API_BASE = 'http://localhost:3000';
+if (window.location.port !== "4321") {
+  API_BASE = "http://localhost:4321";
 }
 
 // === MODE SIMULACIÓ (NOMÉS SI EL SERVIDOR NO RESPON) ===
 let demoMode = false;
-let demoTemp = 45; 
-let demoDirection = 1; 
+let demoTemp = 45;
+let demoDirection = 1;
 
 console.log("Connectant amb el servidor de monitorització...");
 
-
 // Funció de fetch amb timeout i sense capçaleres que bloquegin
 async function smartFetch(url) {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 2500);
-    
-    try {
-        const finalUrl = url + (url.includes('?') ? '&' : '?') + '_cache=' + Date.now();
-        const response = await fetch(finalUrl, { 
-            signal: controller.signal,
-            mode: 'cors',
-            credentials: 'omit'
-        });
-        clearTimeout(timeout);
-        return response;
-    } catch (e) {
-        clearTimeout(timeout);
-        throw e;
-    }
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 2500);
+
+  try {
+    const finalUrl =
+      url + (url.includes("?") ? "&" : "?") + "_cache=" + Date.now();
+    const response = await fetch(finalUrl, {
+      signal: controller.signal,
+      mode: "cors",
+      credentials: "omit",
+    });
+    clearTimeout(timeout);
+    return response;
+  } catch (e) {
+    clearTimeout(timeout);
+    throw e;
+  }
 }
 
-const tempValue = document.getElementById('temp-value');
-const tempMin = document.getElementById('temp-min');
-const tempMax = document.getElementById('temp-max');
-const gaugeProgress = document.querySelector('.gauge-progress');
-const statusDot = document.getElementById('status-dot');
-const statusText = document.getElementById('status-text');
+const tempValue = document.getElementById("temp-value");
+const tempMin = document.getElementById("temp-min");
+const tempMax = document.getElementById("temp-max");
+const gaugeProgress = document.querySelector(".gauge-progress");
+const statusDot = document.getElementById("status-dot");
+const statusText = document.getElementById("status-text");
 
 let minTemp = null;
 let maxTemp = null;
@@ -51,44 +51,51 @@ const CIRCUMFERENCE = 2 * Math.PI * 45;
 gaugeProgress.style.strokeDasharray = CIRCUMFERENCE;
 gaugeProgress.style.strokeDashoffset = CIRCUMFERENCE;
 
-
 // === SIMULACIÓ (FAILBACK) ===
 const demoProcesses = [
-    { name: 'Navegador (Chrome)', cpu: '90.3' },
-    { name: 'Visual Studio Code', cpu: '8.7' },
-    { name: 'Spotify', cpu: '3.2' },
-    { name: 'Sistema Gràfic (X11)', cpu: '2.1' },
-    { name: 'Escriptori (Cinnamon)', cpu: '1.5' }
+  { name: "Navegador (Chrome)", cpu: "90.3" },
+  { name: "Visual Studio Code", cpu: "8.7" },
+  { name: "Spotify", cpu: "3.2" },
+  { name: "Sistema Gràfic (X11)", cpu: "2.1" },
+  { name: "Escriptori (Cinnamon)", cpu: "1.5" },
 ];
 
 function getDemoTemp() {
-    demoTemp += (Math.random() * 2 - 0.5) * demoDirection;
-    if (demoTemp > 72) demoDirection = -1;
-    if (demoTemp < 38) demoDirection = 1;
-    return Math.round(demoTemp * 10) / 10;
+  demoTemp += (Math.random() * 2 - 0.5) * demoDirection;
+  if (demoTemp > 72) demoDirection = -1;
+  if (demoTemp < 38) demoDirection = 1;
+  return Math.round(demoTemp * 10) / 10;
 }
 
 function getDemoProcesses() {
-    return demoProcesses.map(p => ({
-        name: p.name,
-        cpu: (parseFloat(p.cpu) + (Math.random() * 4 - 2)).toFixed(1)
-    }));
+  return demoProcesses.map((p) => ({
+    name: p.name,
+    cpu: (parseFloat(p.cpu) + (Math.random() * 4 - 2)).toFixed(1),
+  }));
 }
 
 function showDemoBanner(customMessage, runCmd) {
-    let banner = document.getElementById('demo-banner');
-    if (!banner) {
-        banner = document.createElement('div');
-        banner.id = 'demo-banner';
-        banner.className = 'demo-banner';
-        document.body.prepend(banner);
-        document.body.classList.add('has-banner');
-    }
-    
-    // Si el missatge és l'error genèric o buit, mostrem la instrucció de recuperació
-    if (!customMessage || customMessage.includes('unreachable') || customMessage.includes('fail')) {
-        const cmd = runCmd || (navigator.platform.toLowerCase().includes('win') ? 'Inicia Monitor.bat' : 'Inicia Monitor.sh');
-        banner.innerHTML = `
+  let banner = document.getElementById("demo-banner");
+  if (!banner) {
+    banner = document.createElement("div");
+    banner.id = "demo-banner";
+    banner.className = "demo-banner";
+    document.body.prepend(banner);
+    document.body.classList.add("has-banner");
+  }
+
+  // Si el missatge és l'error genèric o buit, mostrem la instrucció de recuperació
+  if (
+    !customMessage ||
+    customMessage.includes("unreachable") ||
+    customMessage.includes("fail")
+  ) {
+    const cmd =
+      runCmd ||
+      (navigator.platform.toLowerCase().includes("win")
+        ? "Inicia Monitor.bat"
+        : "Inicia Monitor.sh");
+    banner.innerHTML = `
             <div style="display: flex; flex-direction: column; gap: 4px;">
                 <span>⚠️ DADES SIMULADES — Cal executar "<span style="text-decoration: underline;">${cmd}</span>" per veure dades reals.</span>
                 <small style="opacity: 0.85; font-size: 0.75rem; font-weight: 400;">
@@ -96,329 +103,345 @@ function showDemoBanner(customMessage, runCmd) {
                 </small>
             </div>
         `;
-    } else {
-        banner.innerHTML = customMessage;
-    }
+  } else {
+    banner.innerHTML = customMessage;
+  }
 }
 
 function hideDemoBanner() {
-    const banner = document.getElementById('demo-banner');
-    if (banner) {
-        banner.remove();
-        document.body.classList.remove('has-banner');
-    }
+  const banner = document.getElementById("demo-banner");
+  if (banner) {
+    banner.remove();
+    document.body.classList.remove("has-banner");
+  }
 }
 
 // === FUNCIONS DE VISUALITZACIÓ ===
 function updateGauge(temp) {
-    const percentage = Math.min(Math.max(temp / MAX_DISPLAY_TEMP, 0), 1);
-    const offset = CIRCUMFERENCE - (percentage * CIRCUMFERENCE);
-    gaugeProgress.style.strokeDashoffset = offset;
+  const percentage = Math.min(Math.max(temp / MAX_DISPLAY_TEMP, 0), 1);
+  const offset = CIRCUMFERENCE - percentage * CIRCUMFERENCE;
+  gaugeProgress.style.strokeDashoffset = offset;
 
-    document.querySelectorAll('.guide-item').forEach(item => item.classList.remove('active'));
+  document
+    .querySelectorAll(".guide-item")
+    .forEach((item) => item.classList.remove("active"));
 
-    if (temp >= 90) {
-        gaugeProgress.style.stroke = '#ef4444';
-        statusText.textContent = 'PERILL';
-        statusDot.style.background = '#ef4444';
-        statusDot.style.boxShadow = '0 0 15px #ef4444';
-        document.getElementById('guide-perill').classList.add('active');
-    } else if (temp >= 70) {
-        gaugeProgress.style.stroke = '#f59e0b';
-        statusText.textContent = 'PESAT';
-        statusDot.style.background = '#f59e0b';
-        statusDot.style.boxShadow = '0 0 15px #f59e0b';
-        document.getElementById('guide-heavy').classList.add('active');
-    } else if (temp >= 50) {
-        gaugeProgress.style.stroke = '#38bdf8';
-        statusText.textContent = 'NORMAL';
-        statusDot.style.background = '#38bdf8';
-        statusDot.style.boxShadow = '0 0 15px #38bdf8';
-        document.getElementById('guide-normal').classList.add('active');
-    } else {
-        gaugeProgress.style.stroke = '#10b981';
-        statusText.textContent = 'REPÒS';
-        statusDot.style.background = '#10b981';
-        statusDot.style.boxShadow = '0 0 15px #10b981';
-        document.getElementById('guide-repos').classList.add('active');
-    }
+  if (temp >= 90) {
+    gaugeProgress.style.stroke = "#ef4444";
+    statusText.textContent = "PERILL";
+    statusDot.style.background = "#ef4444";
+    statusDot.style.boxShadow = "0 0 15px #ef4444";
+    document.getElementById("guide-perill").classList.add("active");
+  } else if (temp >= 70) {
+    gaugeProgress.style.stroke = "#f59e0b";
+    statusText.textContent = "PESAT";
+    statusDot.style.background = "#f59e0b";
+    statusDot.style.boxShadow = "0 0 15px #f59e0b";
+    document.getElementById("guide-heavy").classList.add("active");
+  } else if (temp >= 50) {
+    gaugeProgress.style.stroke = "#38bdf8";
+    statusText.textContent = "NORMAL";
+    statusDot.style.background = "#38bdf8";
+    statusDot.style.boxShadow = "0 0 15px #38bdf8";
+    document.getElementById("guide-normal").classList.add("active");
+  } else {
+    gaugeProgress.style.stroke = "#10b981";
+    statusText.textContent = "REPÒS";
+    statusDot.style.background = "#10b981";
+    statusDot.style.boxShadow = "0 0 15px #10b981";
+    document.getElementById("guide-repos").classList.add("active");
+  }
 }
 
 function updateCulprit(processes, currentTemp) {
-    const culpritContainer = document.getElementById('culprit-container');
-    const culpritName = document.getElementById('culprit-name');
-    
-    if (currentTemp >= 70 && processes.length > 0) {
-        const topProcess = processes[0];
-        culpritName.textContent = topProcess.name;
-        culpritContainer.classList.remove('hidden');
-        if (currentTemp >= 90) {
-            culpritContainer.classList.add('danger');
-        } else {
-            culpritContainer.classList.remove('danger');
-        }
+  const culpritContainer = document.getElementById("culprit-container");
+  const culpritName = document.getElementById("culprit-name");
+
+  if (currentTemp >= 70 && processes.length > 0) {
+    const topProcess = processes[0];
+    culpritName.textContent = topProcess.name;
+    culpritContainer.classList.remove("hidden");
+    if (currentTemp >= 90) {
+      culpritContainer.classList.add("danger");
     } else {
-        culpritContainer.classList.add('hidden');
+      culpritContainer.classList.remove("danger");
     }
+  } else {
+    culpritContainer.classList.add("hidden");
+  }
 }
 
 let latestTemp = 0;
 
 function applyTempData(temp) {
-    latestTemp = temp;
-    tempValue.textContent = latestTemp.toFixed(1);
-    
-    if (minTemp === null || latestTemp < minTemp) {
-        minTemp = latestTemp;
-        tempMin.textContent = `${minTemp.toFixed(1)} °C`;
-    }
-    if (latestTemp > (maxTemp || 0)) {
-        maxTemp = latestTemp;
-        tempMax.textContent = `${maxTemp.toFixed(1)} °C`;
-    }
-    updateGauge(latestTemp);
+  latestTemp = temp;
+  tempValue.textContent = latestTemp.toFixed(1);
+
+  if (minTemp === null || latestTemp < minTemp) {
+    minTemp = latestTemp;
+    tempMin.textContent = `${minTemp.toFixed(1)} °C`;
+  }
+  if (latestTemp > (maxTemp || 0)) {
+    maxTemp = latestTemp;
+    tempMax.textContent = `${maxTemp.toFixed(1)} °C`;
+  }
+  updateGauge(latestTemp);
 }
 
 function applyProcessData(processes, totalUsedCores) {
-    const list = document.getElementById('process-list');
-    const degreesToDistribute = Math.max(0, latestTemp - 35);
-    
-    // Si la llista té el missatge de "Càrrega", l'esborrem de forma segura
-    if (list.querySelector('.loading')) {
-        list.innerHTML = '';
-    }
+  const list = document.getElementById("process-list");
+  const degreesToDistribute = Math.max(0, latestTemp - 35);
 
-    const existingItems = list.querySelectorAll('.process-item');
+  // Si la llista té el missatge de "Càrrega", l'esborrem de forma segura
+  if (list.querySelector(".loading")) {
+    list.innerHTML = "";
+  }
 
-    processes.forEach((proc, Inici) => {
-        const cpuVal = parseFloat(proc.cpu);
-        const proportion = (cpuVal / 100) / totalUsedCores;
-        const processDegrees = (proportion * degreesToDistribute).toFixed(1);
+  const existingItems = list.querySelectorAll(".process-item");
 
-        if (existingItems[Inici]) {
-            // Actualitzem dades existents sense trencar la visualització per evitar parpelleigs
-            const li = existingItems[Inici];
-            li.querySelector('.process-name').textContent = proc.name;
-            li.querySelector('.process-temp').textContent = `+${processDegrees}°C`;
-            li.querySelector('.process-cpu').textContent = `${proc.cpu}%`;
-        } else {
-            // Creem l'element només si no en tenim prou a la llista
-            const li = document.createElement('li');
-            li.className = 'process-item';
-            li.innerHTML = `
+  processes.forEach((proc, index) => {
+    const cpuVal = parseFloat(proc.cpu);
+    const proportion = cpuVal / 100 / totalUsedCores;
+    const processDegrees = (proportion * degreesToDistribute).toFixed(1);
+
+    if (existingItems[index]) {
+      // Actualitzem dades existents sense trencar la visualització per evitar parpelleigs
+      const li = existingItems[index];
+      li.querySelector(".process-name").textContent = proc.name;
+      li.querySelector(".process-temp").textContent = `+${processDegrees}°C`;
+      li.querySelector(".process-cpu").textContent = `${proc.cpu}%`;
+    } else {
+      // Creem l'element només si no en tenim prou a la llista
+      const li = document.createElement("li");
+      li.className = "process-item";
+      li.innerHTML = `
                 <span class="process-name">${proc.name}</span>
                 <div class="process-stats">
                     <span class="process-temp">+${processDegrees}°C</span>
                     <span class="process-cpu">${proc.cpu}%</span>
                 </div>
             `;
-            list.appendChild(li);
-        }
-    });
-
-    // Eliminem els elements sobrants (si passem de 5 a 4 processos per algun motiu)
-    for (let i = processes.length; i < existingItems.length; i++) {
-        existingItems[i].remove();
+      list.appendChild(li);
     }
+  });
 
-    updateCulprit(processes, latestTemp);
+  // Eliminem els elements sobrants (si passem de 5 a 4 processos per algun motiu)
+  for (let i = processes.length; i < existingItems.length; i++) {
+    existingItems[i].remove();
+  }
+
+  updateCulprit(processes, latestTemp);
 }
 
 function applyCpuData(totalCores, usedCores) {
-    document.getElementById('cpu-total').textContent = totalCores;
-    document.getElementById('cpu-used').textContent = usedCores.toFixed(2);
+  document.getElementById("cpu-total").textContent = totalCores;
+  document.getElementById("cpu-used").textContent = usedCores.toFixed(2);
 }
 
 // === FETCH REAL (SERVIDOR) ===
 async function fetchTemp() {
-    try {
-        const response = await smartFetch(API_BASE + '/api/temp');
-        const data = await response.json();
-        
-        if (data.error) {
-            showDemoBanner("⚠️ " + data.error);
-            applyTempData(getDemoTemp());
-            return;
-        }
+  try {
+    const response = await smartFetch(API_BASE + "/api/temp");
+    const data = await response.json();
 
-        // Si el servidor ens diu que està en mode demo
-        if (data.demo === true) {
-            if (!demoMode) { 
-                demoMode = true; 
-                showDemoBanner(null, data.run_cmd); 
-            }
-        } else {
-            if (demoMode) { demoMode = false; hideDemoBanner(); }
-        }
-
-        if (typeof data.temp === 'number') {
-            applyTempData(data.temp);
-        }
-    } catch (error) {
-        // Fallback: si falla localhost, provem 127.0.0.1 (i viceversa)
-        if (API_BASE.includes('localhost')) {
-            API_BASE = API_BASE.replace('localhost', '127.0.0.1');
-        } else if (API_BASE.includes('127.0.0.1')) {
-            API_BASE = API_BASE.replace('127.0.0.1', 'localhost');
-        }
-
-        if (!demoMode) { demoMode = true; showDemoBanner(); }
-        applyTempData(getDemoTemp());
+    if (data.error) {
+      showDemoBanner("⚠️ " + data.error);
+      applyTempData(getDemoTemp());
+      return;
     }
+
+    // Si el servidor ens diu que està en mode demo
+    if (data.demo === true) {
+      if (!demoMode) {
+        demoMode = true;
+        showDemoBanner(null, data.run_cmd);
+      }
+    } else {
+      if (demoMode) {
+        demoMode = false;
+        hideDemoBanner();
+      }
+    }
+
+    if (typeof data.temp === "number") {
+      applyTempData(data.temp);
+    }
+  } catch (error) {
+    // Fallback: si falla localhost, provem 127.0.0.1 (i viceversa)
+    if (API_BASE.includes("localhost")) {
+      API_BASE = API_BASE.replace("localhost", "127.0.0.1");
+    } else if (API_BASE.includes("127.0.0.1")) {
+      API_BASE = API_BASE.replace("127.0.0.1", "localhost");
+    }
+
+    if (!demoMode) {
+      demoMode = true;
+      showDemoBanner();
+    }
+    applyTempData(getDemoTemp());
+  }
 }
 
 async function fetchProcesses() {
-    try {
-        const response = await smartFetch(API_BASE + '/api/processes');
-        if (!response.ok) throw new Error('Network response was not ok');
-        const data = await response.json();
-        
-        const cpuResponse = await smartFetch(API_BASE + '/api/cpu');
-        if (!cpuResponse.ok) throw new Error('Network response was not ok');
-        const cpuData = await cpuResponse.json();
-        
-        const totalUsedCores = cpuData.used_cores || 0.1;
-        if (data.processes) {
-            applyProcessData(data.processes, totalUsedCores);
-        }
-    } catch (error) {
-        const fakeProcesses = getDemoProcesses();
-        const fakeTotalCores = 0.8 + Math.random() * 0.5;
-        applyProcessData(fakeProcesses, fakeTotalCores);
+  try {
+    const response = await smartFetch(API_BASE + "/api/processes");
+    if (!response.ok) throw new Error("Network response was not ok");
+    const data = await response.json();
+
+    const cpuResponse = await smartFetch(API_BASE + "/api/cpu");
+    if (!cpuResponse.ok) throw new Error("Network response was not ok");
+    const cpuData = await cpuResponse.json();
+
+    const totalUsedCores = cpuData.used_cores || 0.1;
+    if (data.processes) {
+      applyProcessData(data.processes, totalUsedCores);
     }
+  } catch (error) {
+    const fakeProcesses = getDemoProcesses();
+    const fakeTotalCores = 0.8 + Math.random() * 0.5;
+    applyProcessData(fakeProcesses, fakeTotalCores);
+  }
 }
 
 async function fetchCpu() {
-    try {
-        const response = await smartFetch(API_BASE + '/api/cpu');
-        if (!response.ok) throw new Error('Network response was not ok');
-        const data = await response.json();
-        if (data.total_cores) {
-            applyCpuData(data.total_cores, data.used_cores);
-        }
-    } catch (error) {
-        const fakeCores = 8;
-        const fakeUsed = 0.5 + Math.random() * 2.5;
-        applyCpuData(fakeCores, fakeUsed);
+  try {
+    const response = await smartFetch(API_BASE + "/api/cpu");
+    if (!response.ok) throw new Error("Network response was not ok");
+    const data = await response.json();
+    if (data.total_cores) {
+      applyCpuData(data.total_cores, data.used_cores);
     }
+  } catch (error) {
+    const fakeCores = 8;
+    const fakeUsed = 0.5 + Math.random() * 2.5;
+    applyCpuData(fakeCores, fakeUsed);
+  }
 }
 
 // === HISTORY MODAL ===
-const modal = document.getElementById('modal-history');
-const btnHistory = document.getElementById('btn-history');
-const btnCloseModal = document.getElementById('btn-close-modal');
-const historyList = document.getElementById('history-list');
+const modal = document.getElementById("modal-history");
+const btnHistory = document.getElementById("btn-history");
+const btnCloseModal = document.getElementById("btn-close-modal");
+const historyList = document.getElementById("history-list");
 
 async function fetchHistory() {
-    try {
-        const response = await smartFetch(API_BASE + '/api/history');
-        if (!response.ok) throw new Error('Network response was not ok');
-        const data = await response.json();
-        if (data.history) {
-            historyList.innerHTML = '';
-            if (data.history.length === 0) {
-                historyList.innerHTML = '<li class="loading">No hi ha processos recents amb consum alt (>40%)</li>';
-                return;
-            }
-            data.history.forEach(item => {
-                const li = document.createElement('li');
-                li.className = 'history-item';
-                const statusHtml = item.active 
-                    ? '<span class="status-badge active">🔴 Actiu</span>' 
-                    : '<span class="status-badge">⚪ Finalitzat</span>';
-                li.innerHTML = `
+  try {
+    const response = await smartFetch(API_BASE + "/api/history");
+    if (!response.ok) throw new Error("Network response was not ok");
+    const data = await response.json();
+    if (data.history) {
+      historyList.innerHTML = "";
+      if (data.history.length === 0) {
+        historyList.innerHTML =
+          '<li class="loading">No hi ha processos recents amb consum alt (>40%)</li>';
+        return;
+      }
+      data.history.forEach((item) => {
+        const li = document.createElement("li");
+        li.className = "history-item";
+        const statusHtml = item.active
+          ? '<span class="status-badge active">🔴 Actiu</span>'
+          : '<span class="status-badge">⚪ Finalitzat</span>';
+        li.innerHTML = `
                     <div class="history-info">
                         <span class="history-name">${item.name}</span>
-                        <span class="history-time">${statusHtml} • a les ${item.time}</span>
+                        <span class="history-time">${statusHtml} • a les ${
+          item.time
+        }</span>
                     </div>
-                    <span class="history-cpu">${parseFloat(item.cpu).toFixed(1)}%</span>
+                    <span class="history-cpu">${parseFloat(item.cpu).toFixed(
+                      1
+                    )}%</span>
                 `;
-                historyList.appendChild(li);
-            });
-        }
-    } catch (error) {
-        historyList.innerHTML = '<li class="loading">Connectant amb el servidor per buscar dades reals...</li>';
+        historyList.appendChild(li);
+      });
     }
+  } catch (error) {
+    historyList.innerHTML =
+      '<li class="loading">Connectant amb el servidor per buscar dades reals...</li>';
+  }
 }
 
-btnHistory.addEventListener('click', () => {
-    fetchHistory();
-    modal.classList.add('active');
+btnHistory.addEventListener("click", () => {
+  fetchHistory();
+  modal.classList.add("active");
 });
 
-btnCloseModal.addEventListener('click', () => {
-    modal.classList.remove('active');
+btnCloseModal.addEventListener("click", () => {
+  modal.classList.remove("active");
 });
 
-window.addEventListener('click', (e) => { 
-    if (e.target === modal) {
-        modal.classList.remove('active');
-    }
+window.addEventListener("click", (e) => {
+  if (e.target === modal) {
+    modal.classList.remove("active");
+  }
 });
 
 // === PWA INSTALLATION LOGIC ===
 let deferredPrompt;
-const btnInstall = document.getElementById('btn-install');
-const installModal = document.getElementById('modal-install');
-const btnCloseInstallModal = document.getElementById('btn-close-install-modal');
+const btnInstall = document.getElementById("btn-install");
+const installModal = document.getElementById("modal-install");
+const btnCloseInstallModal = document.getElementById("btn-close-install-modal");
 
-window.addEventListener('beforeinstallprompt', (e) => {
-    // Evitem que surti el missatge genèric del navegador ràpid
-    e.preventDefault();
-    deferredPrompt = e;
+window.addEventListener("beforeinstallprompt", (e) => {
+  // Evitem que surti el missatge genèric del navegador ràpid
+  e.preventDefault();
+  deferredPrompt = e;
 });
 
 if (btnInstall) {
-    btnInstall.addEventListener('click', () => {
-        if (installModal) {
-            installModal.classList.add('active');
-            
-            const warningBox = document.getElementById('install-warning');
-            if (warningBox) {
-                // Si deferredPrompt és null vol dir que el Chrome el bloqueja
-                warningBox.style.display = !deferredPrompt ? 'block' : 'none';
-            }
-        }
-    });
+  btnInstall.addEventListener("click", () => {
+    if (installModal) {
+      installModal.classList.add("active");
+
+      const warningBox = document.getElementById("install-warning");
+      if (warningBox) {
+        // Si deferredPrompt és null vol dir que el Chrome el bloqueja
+        warningBox.style.display = !deferredPrompt ? "block" : "none";
+      }
+    }
+  });
 }
 
-const btnForceInstall = document.getElementById('btn-force-install');
+const btnForceInstall = document.getElementById("btn-force-install");
 if (btnForceInstall) {
-    btnForceInstall.addEventListener('click', async () => {
-        if (!deferredPrompt) {
-            alert("Bloquejat pel navegador. Clica el botó de Chrome directament dalt a la dreta per ignorar aquest bloqueig de seguretat nativa.");
-            return;
-        }
-        
-        deferredPrompt.prompt();
-        const { outcome } = await deferredPrompt.userChoice;
-        if (outcome === 'accepted') {
-            console.log("S'ha instal·lat la PWA!");
-            if (installModal) installModal.classList.remove('active');
-        }
-        deferredPrompt = null;
-    });
+  btnForceInstall.addEventListener("click", async () => {
+    if (!deferredPrompt) {
+      alert(
+        "Bloquejat pel navegador. Clica el botó de Chrome directament dalt a la dreta per ignorar aquest bloqueig de seguretat nativa."
+      );
+      return;
+    }
+
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    if (outcome === "accepted") {
+      console.log("S'ha instal·lat la PWA!");
+      if (installModal) installModal.classList.remove("active");
+    }
+    deferredPrompt = null;
+  });
 }
 
 if (btnCloseInstallModal) {
-    btnCloseInstallModal.addEventListener('click', () => {
-        if (installModal) {
-            installModal.classList.remove('active');
-        }
-    });
+  btnCloseInstallModal.addEventListener("click", () => {
+    if (installModal) {
+      installModal.classList.remove("active");
+    }
+  });
 }
 
 // També permetem tancar-lo fent clic fóra de la caixa
 if (installModal) {
-    installModal.addEventListener('click', (e) => {
-        if (e.target === installModal) {
-            installModal.classList.remove('active');
-        }
-    });
+  installModal.addEventListener("click", (e) => {
+    if (e.target === installModal) {
+      installModal.classList.remove("active");
+    }
+  });
 }
 
-window.addEventListener('appinstalled', () => {
-    deferredPrompt = null;
+window.addEventListener("appinstalled", () => {
+  deferredPrompt = null;
 });
 
 // INIT
@@ -426,7 +449,7 @@ fetchTemp();
 fetchProcesses();
 fetchCpu();
 setInterval(() => {
-    fetchTemp();
-    fetchProcesses();
-    fetchCpu();
+  fetchTemp();
+  fetchProcesses();
+  fetchCpu();
 }, 5000);

@@ -13,7 +13,7 @@ cpu_history = []
 MAX_HISTORY = 20
 
 # Configuració per defecte
-PORT = 3000
+PORT = 4321
 TEST_MODE = False
 
 class TempHandler(http.server.SimpleHTTPRequestHandler):
@@ -128,12 +128,14 @@ class TempHandler(http.server.SimpleHTTPRequestHandler):
                 friendly_names = {
                     'chrome': 'Chrome', 'chromium': 'Chromium', 'firefox': 'Firefox',
                     'msedge': 'Edge', 'python': 'Servidor Monitor', 'python3': 'Servidor Monitor',
-                    'Code': 'VS Code', 'explorer': 'Explorador', 'Taskmgr': 'Admin. Tasques',
+                    'code': 'VS Code', 'Code': 'VS Code', 'explorer': 'Explorador', 'Taskmgr': 'Admin. Tasques',
                     'spotify': 'Spotify', 'discord': 'Discord', 'steam': 'Steam',
                     'vlc': 'VLC Media Player', 'slack': 'Slack', 'zoom': 'Zoom',
-                    'Xorg': 'Sistema Gr\xc3\xa0fic', 'gnome-shell': 'Escriptori (GNOME)',
+                    'Xorg': 'Sistema Gràfic', 'gnome-shell': 'Escriptori (GNOME)',
                     'cinnamon': 'Escriptori (Cinnamon)', 'plasmashell': 'Escriptori (KDE)'
                 }
+                # Versió en minúscules per fer la cerca insensible a majúscules (Linux reporta en minúscules)
+                friendly_names_lower = {k.lower(): v for k, v in friendly_names.items()}
 
                 processes = []
                 if TEST_MODE:
@@ -152,7 +154,7 @@ class TempHandler(http.server.SimpleHTTPRequestHandler):
                             for p in data:
                                 name = p.get('Name', 'Unknown')
                                 cpu_val = p.get('CPU') or 0.0
-                                f_name = friendly_names.get(name, name)
+                                f_name = friendly_names_lower.get(name.lower(), name)
                                 processes.append({'name': f_name, 'cpu': str(round(float(cpu_val), 1)), 'orig': name})
                         except:
                             processes = [{'name': 'Error llegint processos', 'cpu': '0'}]
@@ -165,7 +167,7 @@ class TempHandler(http.server.SimpleHTTPRequestHandler):
                             parts = line.split()
                             if len(parts) >= 2:
                                 name, cpu_val = parts[0], float(parts[1])
-                                f_name = friendly_names.get(name, name)
+                                f_name = friendly_names_lower.get(name.lower(), name)
                                 if f_name not in grouped_data: grouped_data[f_name] = {'cpu': 0.0, 'orig': name}
                                 grouped_data[f_name]['cpu'] += cpu_val
 
@@ -230,6 +232,9 @@ class TempHandler(http.server.SimpleHTTPRequestHandler):
             path = self.path.split('?')[0]
             if path == '/':
                 path = '/inici.html'
+            # El navegador sempre demana /favicon.ico; el redirigim al nostre icon.svg
+            elif path == '/favicon.ico':
+                path = '/icon.svg'
             
             # Seguretat: Validació de camins per evitar Directory Traversal
             base_dir = os.getcwd()
@@ -243,9 +248,21 @@ class TempHandler(http.server.SimpleHTTPRequestHandler):
 
             if os.path.exists(filepath) and os.path.isfile(filepath):
                 self.send_response(200)
-                if filepath.endswith(".html"): self.send_header('Content-type', 'text/html')
-                elif filepath.endswith(".css"): self.send_header('Content-type', 'text/css')
-                elif filepath.endswith(".js"): self.send_header('Content-type', 'application/javascript')
+                mime_types = {
+                    '.html': 'text/html; charset=utf-8',
+                    '.css': 'text/css; charset=utf-8',
+                    '.js': 'application/javascript; charset=utf-8',
+                    '.json': 'application/json; charset=utf-8',
+                    '.svg': 'image/svg+xml',
+                    '.png': 'image/png',
+                    '.jpg': 'image/jpeg',
+                    '.ico': 'image/x-icon',
+                    '.woff': 'font/woff',
+                    '.woff2': 'font/woff2'
+                }
+                ext = os.path.splitext(filepath)[1].lower()
+                content_type = mime_types.get(ext, 'application/octet-stream')
+                self.send_header('Content-type', content_type)
                 self.end_headers()
                 with open(filepath, 'rb') as f:
                     self.wfile.write(f.read())
@@ -257,7 +274,7 @@ class TempHandler(http.server.SimpleHTTPRequestHandler):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Monitor de temperatura del PC')
     parser.add_argument('--test', '-t', action='store_true', help='Executa en mode prova amb dades simulades')
-    parser.add_argument('--port', '-p', type=int, default=3000, help='Port del servidor')
+    parser.add_argument('--port', '-p', type=int, default=4321, help='Port del servidor')
     args = parser.parse_args()
 
     PORT = args.port

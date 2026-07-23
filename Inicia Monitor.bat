@@ -35,7 +35,7 @@ start "MonitorTemperaturaServer" /min %PY_CMD% server.py %ARGS%
 
 :: Espera un moment i obre en mode aplicació (sense barra d'adreces)
 timeout /t 2 /nobreak >nul
-start msedge --app=http://localhost:3000/inici.html || start chrome --app=http://localhost:3000/inici.html || start http://localhost:3000
+start msedge --app=http://localhost:4321/inici.html || start chrome --app=http://localhost:4321/inici.html || start http://localhost:4321
 
 
 echo.
