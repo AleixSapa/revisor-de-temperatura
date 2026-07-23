@@ -231,7 +231,7 @@ class TempHandler(http.server.SimpleHTTPRequestHandler):
         else:
             path = self.path.split('?')[0]
             if path == '/':
-                path = '/inici.html'
+                path = '/index.html'
             # El navegador sempre demana /favicon.ico; el redirigim al nostre icon.svg
             elif path == '/favicon.ico':
                 path = '/icon.svg'

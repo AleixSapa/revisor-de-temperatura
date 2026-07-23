@@ -15,7 +15,7 @@ L'aplicació es divideix en dues parts que treballen juntes:
 - **`server.py`**: Creat amb `http.server`, obre una API al port 4321. Detecta automàticament si ets a Windows o Linux per utilitzar els mètodes de lectura de sensors adequats (WMI/PowerShell en Windows i Thermal Zones en Linux).
 
 ### Frontend (Web Modern)
-- **`inici.html` & `style.css`**: Disseny premium amb mode fosc, disseny responsive i animacions d'estat (Repòs, Normal, Pesat, Perill).
+- **`index.html` & `style.css`**: Disseny premium amb mode fosc, disseny responsive i animacions d'estat (Repòs, Normal, Pesat, Perill).
 - **`script.js`**: Gestiona el refresc de dades cada 5 segons i inclou un mode de simulació per si el servidor no és accessible.
 - **`sw.js` & `manifest.json`**: Converteixen la web en una PWA, permetent la instal·lació nativa al sistema.
 
@@ -33,7 +33,7 @@ L'aplicació es divideix en dues parts que treballen juntes:
 - `server.py`: Servidor API i de fitxers.
 - `script.js`: Lògica de control i visualització.
 - `style.css`: Estils visual de l'aplicació.
-- `inici.html`: Estructura principal de la interfície.
+- `index.html`: Estructura principal de la interfície.
 - `sw.js`: Gestió de la memòria cau i PWA.
 
 ## 🔔 Gestió d'Avisos Dinàmics
