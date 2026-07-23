@@ -1,15 +1,24 @@
 // === CONFIGURACIÓ DEL SERVIDOR ===
 let API_BASE = "";
 
-// En producció (domini/subdomini), les peticions API són same-origin (relatives
-// al mateix domini), per tant API_BASE queda buit. Només en desenvolupament local
-// amb Live Server (port diferent al backend) apuntem explícitament al backend.
+// El backend (server.py) serveix TANT els fitxers estàtics COM l'API en el mateix
+// port (8080). Per tant, si la pàgina es carrega des del backend, les peticions
+// són same-origin i API_BASE queda buit ("").
+//
+// Només cal apuntar explícitament al backend si la pàgina es carrega des d'un
+// altre origen: file:// (doble clic a l'HTML) o Live Server (port diferent).
+const BACKEND_PORT = "7689";
+
 if (
-  (location.hostname === "localhost" || location.hostname === "127.0.0.1") &&
-  location.port !== "80" &&
-  location.port !== ""
+  location.protocol === "file:" ||
+  (location.hostname === "localhost" &&
+    location.port !== BACKEND_PORT &&
+    location.port !== "") ||
+  (location.hostname === "127.0.0.1" &&
+    location.port !== BACKEND_PORT &&
+    location.port !== "")
 ) {
-  API_BASE = "http://localhost";
+  API_BASE = "http://localhost:" + BACKEND_PORT;
 }
 
 // === MODE SIMULACIÓ (NOMÉS SI EL SERVIDOR NO RESPON) ===

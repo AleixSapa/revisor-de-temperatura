@@ -1,4 +1,4 @@
-const CACHE_NAME = "monitor-temp-v11";
+const CACHE_NAME = "monitor-temp-v12";
 const ASSETS_TO_CACHE = [
   "./",
   "./index.html",
