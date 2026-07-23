@@ -253,6 +253,97 @@ function applyCpuData(totalCores, usedCores) {
   document.getElementById("cpu-used").textContent = usedCores.toFixed(2);
 }
 
+// === ACTUALITZAR TOTS ELS SENSORS ===
+// Rangs de temperatura específics per cada sensor
+const SENSOR_RANGES = {
+  cpu: { normal: 50, heavy: 70, danger: 90 },
+  system: { normal: 40, heavy: 60, danger: 80 },
+  gpu: { normal: 50, heavy: 70, danger: 90 },
+  ssd: { normal: 45, heavy: 60, danger: 75 },
+  wifi: { normal: 40, heavy: 55, danger: 75 },
+  battery: { normal: 35, heavy: 45, danger: 60 },
+};
+
+function getTempClass(temp, sensorType) {
+  const r = SENSOR_RANGES[sensorType] || SENSOR_RANGES.cpu;
+  if (temp >= r.danger) return "temp-danger";
+  if (temp >= r.heavy) return "temp-heavy";
+  if (temp >= r.normal) return "temp-normal";
+  return "temp-cool";
+}
+
+function updateSensors(sensors) {
+  if (!sensors) return;
+
+  const MINI_CIRC = 264; // 2 * PI * 42
+  const tempCategories = ["cpu", "system", "gpu", "ssd", "wifi"];
+  tempCategories.forEach((cat) => {
+    if (sensors[cat] && typeof sensors[cat].temp === "number") {
+      const el = document.getElementById(`sensor-${cat}`);
+      const card = document.querySelector(`.sensor-card[data-sensor="${cat}"]`);
+      const gauge = document.querySelector(`[data-sensor-gauge="${cat}"]`);
+      if (el) {
+        el.textContent = sensors[cat].temp.toFixed(1);
+      }
+      if (card) {
+        card.classList.remove(
+          "temp-cool",
+          "temp-normal",
+          "temp-heavy",
+          "temp-danger"
+        );
+        card.classList.add(getTempClass(sensors[cat].temp, cat));
+      }
+      if (gauge) {
+        const danger = (SENSOR_RANGES[cat] || SENSOR_RANGES.cpu).danger;
+        const pct = Math.min(Math.max(sensors[cat].temp / danger, 0), 1);
+        gauge.style.strokeDashoffset = MINI_CIRC - pct * MINI_CIRC;
+      }
+    }
+  });
+
+  // Bateria: capacitat + voltatge + estat
+  if (sensors.battery) {
+    const batEl = document.getElementById("sensor-battery");
+    const batUnit = document.getElementById("sensor-battery-unit");
+    const batStatus = document.getElementById("sensor-battery-status");
+    const batCard = document.querySelector(
+      '.sensor-card[data-sensor="battery"]'
+    );
+    const batGauge = document.querySelector('[data-sensor-gauge="battery"]');
+
+    if (batEl && sensors.battery.capacity != null) {
+      batEl.textContent = sensors.battery.capacity;
+    }
+    if (batUnit) {
+      batUnit.textContent = "%";
+    }
+    if (batStatus) {
+      const volt =
+        sensors.battery.voltage != null ? `${sensors.battery.voltage}V` : "";
+      const status = sensors.battery.status || "";
+      batStatus.textContent = `${status}${volt ? " · " + volt : ""}`;
+    }
+    if (batCard) {
+      batCard.classList.remove(
+        "temp-cool",
+        "temp-normal",
+        "temp-heavy",
+        "temp-danger"
+      );
+      const cap = sensors.battery.capacity || 0;
+      if (cap <= 15) batCard.classList.add("temp-danger");
+      else if (cap <= 30) batCard.classList.add("temp-heavy");
+      else batCard.classList.add("temp-cool");
+    }
+    if (batGauge) {
+      const cap = sensors.battery.capacity || 0;
+      const pct = Math.min(Math.max(cap / 100, 0), 1);
+      batGauge.style.strokeDashoffset = MINI_CIRC - pct * MINI_CIRC;
+    }
+  }
+}
+
 // === FETCH REAL (SERVIDOR) ===
 async function fetchTemp() {
   try {
@@ -280,6 +371,11 @@ async function fetchTemp() {
 
     if (typeof data.temp === "number") {
       applyTempData(data.temp);
+    }
+
+    // Actualitzar tots els sensors (CPU, GPU, SSD, Wi-Fi, etc.)
+    if (data.sensors) {
+      updateSensors(data.sensors);
     }
   } catch (error) {
     // Fallback: si falla localhost, provem 127.0.0.1 (i viceversa)

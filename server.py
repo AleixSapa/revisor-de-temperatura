@@ -16,6 +16,129 @@ MAX_HISTORY = 20
 PORT = 80
 TEST_MODE = False
 
+
+def read_all_sensors_linux():
+    """Llegeix TOTS els sensors de temperatura disponibles a Linux via /sys/class/hwmon
+    i /sys/class/power_supply. Retorna un diccionari amb categories."""
+    sensors = {}
+
+    # Mapeig de noms hwmon a categories
+    def classify(name):
+        n = name.lower()
+        if n in ('k10temp', 'coretemp', 'cpu_thermal', 'zenpower', 'fam15h_power'):
+            return 'cpu'
+        if n in ('amdgpu', 'nvidia', 'radeon', 'nouveau'):
+            return 'gpu'
+        if 'nvme' in n:
+            return 'ssd'
+        if 'wifi' in n or 'mt7' in n or 'iwl' in n or 'ath' in n or 'wl' in n:
+            return 'wifi'
+        if 'acpitz' in n:
+            return 'system'
+        return None
+
+    labels_map = {
+        'cpu': 'Processador (CPU)',
+        'gpu': 'Targeta gràfica (GPU)',
+        'ssd': 'Disc SSD NVMe',
+        'wifi': 'Wi-Fi',
+        'system': 'Sistema intern',
+    }
+
+    try:
+        hwmon_dir = '/sys/class/hwmon'
+        if os.path.isdir(hwmon_dir):
+            for hwmon_name in sorted(os.listdir(hwmon_dir)):
+                hwmon_path = os.path.join(hwmon_dir, hwmon_name)
+                name_file = os.path.join(hwmon_path, 'name')
+                if not os.path.isfile(name_file):
+                    continue
+                try:
+                    with open(name_file, 'r') as f:
+                        hwmon_name_val = f.read().strip()
+                except:
+                    continue
+
+                category = classify(hwmon_name_val)
+                if category is None:
+                    continue
+                if category in sensors:
+                    continue  # Ja tenim aquesta categoria
+
+                # Llegir la primera temperatura vàlida
+                for fname in sorted(os.listdir(hwmon_path)):
+                    if fname.startswith('temp') and fname.endswith('_input'):
+                        try:
+                            with open(os.path.join(hwmon_path, fname), 'r') as f:
+                                raw = f.read().strip()
+                            temp = float(raw) / 1000.0
+                            if 5 < temp < 150:
+                                sensors[category] = {
+                                    'label': labels_map.get(category, category),
+                                    'temp': round(temp, 1),
+                                    'unit': '°C'
+                                }
+                                break
+                        except:
+                            continue
+    except:
+        pass
+
+    # Bateria: voltage i capacity des de /sys/class/power_supply
+    try:
+        ps_dir = '/sys/class/power_supply'
+        if os.path.isdir(ps_dir):
+            for ps_name in sorted(os.listdir(ps_dir)):
+                ps_path = os.path.join(ps_dir, ps_name)
+                type_file = os.path.join(ps_path, 'type')
+                if not os.path.isfile(type_file):
+                    continue
+                try:
+                    with open(type_file, 'r') as f:
+                        ps_type = f.read().strip()
+                except:
+                    continue
+                if ps_type.lower() != 'battery':
+                    continue
+
+                voltage = None
+                capacity = None
+                status = None
+                volt_file = os.path.join(ps_path, 'voltage_now')
+                cap_file = os.path.join(ps_path, 'capacity')
+                stat_file = os.path.join(ps_path, 'status')
+                if os.path.isfile(volt_file):
+                    try:
+                        with open(volt_file, 'r') as f:
+                            voltage = round(float(f.read().strip()) / 1000000.0, 2)
+                    except:
+                        pass
+                if os.path.isfile(cap_file):
+                    try:
+                        with open(cap_file, 'r') as f:
+                            capacity = int(f.read().strip())
+                    except:
+                        pass
+                if os.path.isfile(stat_file):
+                    try:
+                        with open(stat_file, 'r') as f:
+                            status = f.read().strip()
+                    except:
+                        pass
+                sensors['battery'] = {
+                    'label': 'Bateria',
+                    'voltage': voltage,
+                    'capacity': capacity,
+                    'status': status,
+                    'unit': 'V'
+                }
+                break
+    except:
+        pass
+
+    return sensors
+
+
 class TempHandler(http.server.SimpleHTTPRequestHandler):
     def end_headers(self):
         # CORS per permetre que GitHub Pages demani dades a localhost
@@ -101,15 +224,31 @@ class TempHandler(http.server.SimpleHTTPRequestHandler):
                             raise Exception("No s'ha pogut llegir la temperatura. Revisa si tens sensors compatibles i permisos d'Administrador.")
                         raise Exception("No s'ha trobat cap sensor de temperatura compatible (Thermal Zone/Hwmon) a Linux.")
 
+                # Llegir tots els sensors disponibles (Linux)
+                all_sensors = {}
+                if not is_windows and not TEST_MODE:
+                    all_sensors = read_all_sensors_linux()
+                elif TEST_MODE:
+                    # Dades simulades per al mode de prova
+                    all_sensors = {
+                        'cpu': {'label': 'Processador (CPU)', 'temp': round(40 + random.random() * 30, 1), 'unit': '°C'},
+                        'gpu': {'label': 'Targeta gràfica (GPU)', 'temp': round(35 + random.random() * 25, 1), 'unit': '°C'},
+                        'ssd': {'label': 'Disc SSD NVMe', 'temp': round(30 + random.random() * 20, 1), 'unit': '°C'},
+                        'wifi': {'label': 'Wi-Fi', 'temp': round(40 + random.random() * 15, 1), 'unit': '°C'},
+                        'system': {'label': 'Sistema intern', 'temp': round(45 + random.random() * 20, 1), 'unit': '°C'},
+                        'battery': {'label': 'Bateria', 'voltage': round(11 + random.random() * 2, 2), 'capacity': random.randint(20, 100), 'status': 'Discharging', 'unit': 'V'},
+                    }
+
                 self.send_response(200)
                 self.send_header('Content-type', 'application/json')
                 self.end_headers()
                 res = {
-                    'temp': temp, 
-                    'unit': '°C', 
+                    'temp': temp,
+                    'unit': '°C',
                     'demo': TEST_MODE,
                     'os': 'windows' if is_windows else 'linux',
-                    'run_cmd': 'Inicia Monitor.bat' if is_windows else 'linux_extras/run.sh'
+                    'run_cmd': 'Inicia Monitor.bat' if is_windows else 'linux_extras/run.sh',
+                    'sensors': all_sensors
                 }
                 self.wfile.write(json.dumps(res).encode())
             except Exception as e:
