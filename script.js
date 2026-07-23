@@ -1,12 +1,14 @@
 // === CONFIGURACIÓ DEL SERVIDOR ===
 let API_BASE = "";
-let currentHost = "localhost";
 
-// El port 80 és el port per defecte d'HTTP: el navegador el reporta com a "" (buit).
-// Si la pàgina es serveix des del mateix servidor (port 80), API_BASE queda buit
-// per fer peticions same-origin. Si s'obre des d'un altre port (ex: Live Server),
-// apuntem al backend al port 80.
-if (window.location.port !== "80" && window.location.port !== "") {
+// En producció (domini/subdomini), les peticions API són same-origin (relatives
+// al mateix domini), per tant API_BASE queda buit. Només en desenvolupament local
+// amb Live Server (port diferent al backend) apuntem explícitament al backend.
+if (
+  (location.hostname === "localhost" || location.hostname === "127.0.0.1") &&
+  location.port !== "80" &&
+  location.port !== ""
+) {
   API_BASE = "http://localhost";
 }
 
