@@ -60,63 +60,14 @@
       </header>
 
       <main>
-        <div class="temp-card">
-          <div class="gauge-container">
-            <svg viewBox="0 0 100 100" class="gauge">
-              <circle class="gauge-bg" cx="50" cy="50" r="45"></circle>
-              <circle class="gauge-progress" cx="50" cy="50" r="45"></circle>
-            </svg>
-            <div class="temp-display">
-              <span id="temp-value">--</span>
-              <span class="unit">°C</span>
-            </div>
-          </div>
+        <!-- Elements ocults necessaris per al JS (gauge gran eliminat) -->
+        <span id="temp-value" class="hidden-el">--</span>
+        <svg class="hidden-el">
+          <circle class="gauge-progress" cx="50" cy="50" r="45"></circle>
+        </svg>
 
-          <div class="status-indicator">
-            <div id="status-dot" class="dot"></div>
-            <span id="status-text">Connectant...</span>
-          </div>
-
-          <!-- Nou: Culpable de la calor -->
-          <div id="culprit-container" class="culprit-container hidden">
-            <span class="label">Possible Culpable</span>
-            <div class="culprit-info">
-              <svg
-                viewBox="0 0 24 24"
-                width="16"
-                height="16"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-              >
-                <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path>
-              </svg>
-              <span id="culprit-name">--</span>
-            </div>
-          </div>
-        </div>
-
-        <div class="info-grid">
-          <div class="info-item">
-            <span class="label">Mínima</span>
-            <span id="temp-min" class="val">--</span>
-          </div>
-          <div class="info-item">
-            <span class="label">Màxima</span>
-            <span id="temp-max" class="val">--</span>
-          </div>
-          <div class="info-item">
-            <span class="label">Nuclis Totals</span>
-            <span id="cpu-total" class="val">--</span>
-          </div>
-          <div class="info-item">
-            <span class="label">Nuclis en Ús</span>
-            <span id="cpu-used" class="val">--</span>
-          </div>
-        </div>
-
+        <!-- Mini-gauges: A DALT DE TOT -->
         <div class="sensors-section">
-          <span class="label">Tots els Sensors</span>
           <div class="sensors-grid" id="sensors-grid">
             <div class="sensor-card" data-sensor="cpu">
               <div class="mini-gauge-wrap">
@@ -195,7 +146,7 @@
                   <span class="sensor-unit">°C</span>
                 </div>
               </div>
-              <span class="sensor-name">SSD</span>
+              <span class="sensor-name">Disc</span>
             </div>
 
             <div class="sensor-card" data-sensor="wifi">
@@ -242,6 +193,49 @@
           </div>
         </div>
 
+        <!-- Estat general + culpable -->
+        <div class="status-indicator">
+          <div id="status-dot" class="dot"></div>
+          <span id="status-text">Connectant...</span>
+        </div>
+
+        <div id="culprit-container" class="culprit-container hidden">
+          <span class="label">Possible Culpable</span>
+          <div class="culprit-info">
+            <svg
+              viewBox="0 0 24 24"
+              width="16"
+              height="16"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path>
+            </svg>
+            <span id="culprit-name">--</span>
+          </div>
+        </div>
+
+        <!-- Info grid -->
+        <div class="info-grid">
+          <div class="info-item">
+            <span class="label">Mínima</span>
+            <span id="temp-min" class="val">--</span>
+          </div>
+          <div class="info-item">
+            <span class="label">Màxima</span>
+            <span id="temp-max" class="val">--</span>
+          </div>
+          <div class="info-item">
+            <span class="label">Nuclis Totals</span>
+            <span id="cpu-total" class="val">--</span>
+          </div>
+          <div class="info-item">
+            <span class="label">Nuclis en Ús</span>
+            <span id="cpu-used" class="val">--</span>
+          </div>
+        </div>
+
         <div class="processes-card">
           <span class="label">Top Consum CPU</span>
           <ul id="process-list" class="process-list">
@@ -250,20 +244,71 @@
           </ul>
         </div>
         <div class="temp-guide">
-          <span class="label">Guia de Temperatures</span>
-          <div class="guide-grid">
-            <div class="guide-item cool" id="guide-repos">
-              <span>35-50°C</span> Repòs
-            </div>
-            <div class="guide-item normal" id="guide-normal">
-              <span>50-70°C</span> Normal
-            </div>
-            <div class="guide-item heavy" id="guide-heavy">
-              <span>70-85°C</span> Pesat
-            </div>
-            <div class="guide-item danger" id="guide-perill">
-              <span>> 90°C</span> Perill
-            </div>
+          <span class="label">Guia de Temperatures per Sensor</span>
+          <div class="guide-table-wrap">
+            <table class="guide-table">
+              <thead>
+                <tr>
+                  <th>Sensor</th>
+                  <th class="th-cool">Repòs</th>
+                  <th class="th-normal">Normal</th>
+                  <th class="th-heavy">Alt</th>
+                  <th class="th-danger">Perill</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td class="sensor-label"><span class="dot-cpu"></span>CPU</td>
+                  <td>30–50°</td>
+                  <td>50–70°</td>
+                  <td>70–85°</td>
+                  <td>&gt;90°</td>
+                </tr>
+                <tr>
+                  <td class="sensor-label">
+                    <span class="dot-system"></span>Sistema
+                  </td>
+                  <td>25–40°</td>
+                  <td>40–60°</td>
+                  <td>60–75°</td>
+                  <td>&gt;80°</td>
+                </tr>
+                <tr>
+                  <td class="sensor-label"><span class="dot-gpu"></span>GPU</td>
+                  <td>30–50°</td>
+                  <td>50–70°</td>
+                  <td>70–85°</td>
+                  <td>&gt;90°</td>
+                </tr>
+                <tr>
+                  <td class="sensor-label">
+                    <span class="dot-ssd"></span>Disc
+                  </td>
+                  <td>25–45°</td>
+                  <td>45–60°</td>
+                  <td>60–70°</td>
+                  <td>&gt;75°</td>
+                </tr>
+                <tr>
+                  <td class="sensor-label">
+                    <span class="dot-wifi"></span>Wi-Fi
+                  </td>
+                  <td>25–40°</td>
+                  <td>40–55°</td>
+                  <td>55–70°</td>
+                  <td>&gt;75°</td>
+                </tr>
+                <tr>
+                  <td class="sensor-label">
+                    <span class="dot-battery"></span>Bateria
+                  </td>
+                  <td>25–35°</td>
+                  <td>35–45°</td>
+                  <td>45–55°</td>
+                  <td>&gt;60°</td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </div>
       </main>

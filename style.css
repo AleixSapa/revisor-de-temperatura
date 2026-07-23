@@ -178,10 +178,7 @@ header p {
 }
 
 .status-indicator {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.75rem;
+  display: none;
 }
 
 .dot {
@@ -252,9 +249,7 @@ header p {
 }
 
 .info-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1rem;
+  display: none;
 }
 
 .info-item {
@@ -331,70 +326,98 @@ header p {
 .temp-guide {
   margin-top: 1rem;
   background: var(--card-bg);
-  padding: 1.25rem;
+  padding: 1rem 1.25rem;
   border-radius: 1.5rem;
   border: 1px solid var(--border-color);
 }
 
-.guide-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.5rem;
-  margin-top: 0.5rem;
+.guide-table-wrap {
+  margin-top: 0.6rem;
+  overflow-x: auto;
 }
 
-.guide-item {
-  font-size: 0.75rem;
+.guide-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.72rem;
+}
+
+.guide-table th,
+.guide-table td {
+  padding: 0.3rem 0.35rem;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.guide-table thead th {
   color: var(--text-secondary);
+  font-weight: 600;
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.guide-table tbody tr {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.guide-table tbody tr:last-child {
+  border-bottom: none;
+}
+
+.guide-table td.sensor-label {
+  text-align: left;
+  font-weight: 600;
+  color: var(--text-primary);
   display: flex;
-  flex-direction: column;
   align-items: center;
-  padding: 0.5rem;
-  border-radius: 0.75rem;
-  background: rgba(255, 255, 255, 0.02);
+  gap: 0.4rem;
 }
 
-.guide-item span {
-  font-weight: 700;
-  font-size: 0.85rem;
-  margin-bottom: 0.2rem;
-}
-
-.guide-item.cool span {
+.guide-table .th-cool {
   color: var(--success);
 }
-.guide-item.normal span {
+.guide-table .th-normal {
   color: var(--accent-color);
 }
-.guide-item.heavy span {
+.guide-table .th-heavy {
   color: var(--warning);
 }
-.guide-item.danger span {
+.guide-table .th-danger {
   color: var(--danger);
 }
 
-.guide-item.active {
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  transform: scale(1.05);
-  transition: all 0.3s ease;
+/* Punts de color per cada sensor */
+.guide-table .dot-cpu,
+.guide-table .dot-system,
+.guide-table .dot-gpu,
+.guide-table .dot-ssd,
+.guide-table .dot-wifi,
+.guide-table .dot-battery {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
 }
-
-.guide-item.active.cool {
-  border-color: var(--success);
-  box-shadow: 0 0 10px rgba(16, 185, 129, 0.2);
+.dot-cpu {
+  background: #38bdf8;
 }
-.guide-item.active.normal {
-  border-color: var(--accent-color);
-  box-shadow: 0 0 10px rgba(56, 189, 248, 0.2);
+.dot-system {
+  background: #f87171;
 }
-.guide-item.active.heavy {
-  border-color: var(--warning);
-  box-shadow: 0 0 10px rgba(245, 158, 11, 0.2);
+.dot-gpu {
+  background: #c084fc;
 }
-.guide-item.active.danger {
-  border-color: var(--danger);
-  box-shadow: 0 0 10px rgba(239, 68, 68, 0.2);
+.dot-ssd {
+  background: #4ade80;
+}
+.dot-wifi {
+  background: #fb923c;
+}
+.dot-battery {
+  background: #a3e635;
 }
 
 .label {
@@ -413,31 +436,31 @@ header p {
   color: var(--text-primary);
 }
 
-/* ===== Secció de tots els sensors amb mini-gauges ===== */
+/* ===== Elements ocults (necessaris pel JS) ===== */
+.hidden-el {
+  display: none !important;
+}
+
+/* ===== Secció de sensors (ara és la principal, a dalt de tot) ===== */
 .sensors-section {
-  margin-top: 1rem;
-  background: var(--card-bg);
-  padding: 1.25rem;
-  border-radius: 1.5rem;
-  border: 1px solid var(--border-color);
+  padding: 0;
 }
 
 .sensors-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 0.75rem;
-  margin-top: 0.5rem;
 }
 
 .sensor-card {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.4rem;
-  padding: 0.75rem 0.5rem;
-  border-radius: 1rem;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  gap: 0.5rem;
+  padding: 1rem 0.5rem 0.75rem;
+  border-radius: 1.25rem;
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
   transition: all 0.3s ease;
 }
 
@@ -450,8 +473,8 @@ header p {
 /* Mini gauge circular */
 .mini-gauge-wrap {
   position: relative;
-  width: 70px;
-  height: 70px;
+  width: 100px;
+  height: 100px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -466,13 +489,13 @@ header p {
 .mini-gauge-bg {
   fill: none;
   stroke: rgba(255, 255, 255, 0.08);
-  stroke-width: 8;
+  stroke-width: 7;
 }
 
 .mini-gauge-progress {
   fill: none;
   stroke: var(--accent-color);
-  stroke-width: 8;
+  stroke-width: 7;
   stroke-linecap: round;
   stroke-dasharray: 264;
   stroke-dashoffset: 264;
@@ -488,20 +511,20 @@ header p {
 }
 
 .sensor-temp {
-  font-size: 1.1rem;
+  font-size: 1.5rem;
   font-weight: 800;
   color: var(--text-primary);
   font-variant-numeric: tabular-nums;
 }
 
 .sensor-unit {
-  font-size: 0.55rem;
+  font-size: 0.65rem;
   color: var(--text-secondary);
   font-weight: 600;
 }
 
 .sensor-name {
-  font-size: 0.7rem;
+  font-size: 0.75rem;
   font-weight: 600;
   color: var(--text-secondary);
   text-align: center;
@@ -554,17 +577,24 @@ header p {
     grid-template-columns: repeat(3, 1fr);
   }
   .mini-gauge-wrap {
-    width: 60px;
-    height: 60px;
+    width: 80px;
+    height: 80px;
   }
   .sensor-temp {
-    font-size: 0.95rem;
+    font-size: 1.2rem;
   }
 }
 
 @media (max-width: 380px) {
   .sensors-grid {
     grid-template-columns: repeat(2, 1fr);
+  }
+  .mini-gauge-wrap {
+    width: 70px;
+    height: 70px;
+  }
+  .sensor-temp {
+    font-size: 1.1rem;
   }
 }
 

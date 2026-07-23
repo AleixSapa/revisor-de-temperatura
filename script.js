@@ -137,34 +137,26 @@ function updateGauge(temp) {
   const offset = CIRCUMFERENCE - percentage * CIRCUMFERENCE;
   gaugeProgress.style.strokeDashoffset = offset;
 
-  document
-    .querySelectorAll(".guide-item")
-    .forEach((item) => item.classList.remove("active"));
-
   if (temp >= 90) {
     gaugeProgress.style.stroke = "#ef4444";
     statusText.textContent = "PERILL";
     statusDot.style.background = "#ef4444";
     statusDot.style.boxShadow = "0 0 15px #ef4444";
-    document.getElementById("guide-perill").classList.add("active");
   } else if (temp >= 70) {
     gaugeProgress.style.stroke = "#f59e0b";
     statusText.textContent = "PESAT";
     statusDot.style.background = "#f59e0b";
     statusDot.style.boxShadow = "0 0 15px #f59e0b";
-    document.getElementById("guide-heavy").classList.add("active");
   } else if (temp >= 50) {
     gaugeProgress.style.stroke = "#38bdf8";
     statusText.textContent = "NORMAL";
     statusDot.style.background = "#38bdf8";
     statusDot.style.boxShadow = "0 0 15px #38bdf8";
-    document.getElementById("guide-normal").classList.add("active");
   } else {
     gaugeProgress.style.stroke = "#10b981";
     statusText.textContent = "REPÒS";
     statusDot.style.background = "#10b981";
     statusDot.style.boxShadow = "0 0 15px #10b981";
-    document.getElementById("guide-repos").classList.add("active");
   }
 }
 
