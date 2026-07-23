@@ -13,7 +13,7 @@ cpu_history = []
 MAX_HISTORY = 20
 
 # Configuració per defecte
-PORT = 4321
+PORT = 80
 TEST_MODE = False
 
 class TempHandler(http.server.SimpleHTTPRequestHandler):
@@ -274,7 +274,7 @@ class TempHandler(http.server.SimpleHTTPRequestHandler):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Monitor de temperatura del PC')
     parser.add_argument('--test', '-t', action='store_true', help='Executa en mode prova amb dades simulades')
-    parser.add_argument('--port', '-p', type=int, default=4321, help='Port del servidor')
+    parser.add_argument('--port', '-p', type=int, default=80, help='Port del servidor')
     args = parser.parse_args()
 
     PORT = args.port

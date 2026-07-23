@@ -2,8 +2,12 @@
 let API_BASE = "";
 let currentHost = "localhost";
 
-if (window.location.port !== "4321") {
-  API_BASE = "http://localhost:4321";
+// El port 80 és el port per defecte d'HTTP: el navegador el reporta com a "" (buit).
+// Si la pàgina es serveix des del mateix servidor (port 80), API_BASE queda buit
+// per fer peticions same-origin. Si s'obre des d'un altre port (ex: Live Server),
+// apuntem al backend al port 80.
+if (window.location.port !== "80" && window.location.port !== "") {
+  API_BASE = "http://localhost";
 }
 
 // === MODE SIMULACIÓ (NOMÉS SI EL SERVIDOR NO RESPON) ===

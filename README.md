@@ -12,7 +12,7 @@ L'aplicació es divideix en dues parts que treballen juntes:
 ## 🛠️ Components Tècnics
 
 ### Backend (Python)
-- **`server.py`**: Creat amb `http.server`, obre una API al port 4321. Detecta automàticament si ets a Windows o Linux per utilitzar els mètodes de lectura de sensors adequats (WMI/PowerShell en Windows i Thermal Zones en Linux).
+- **`server.py`**: Creat amb `http.server`, obre una API al port 80. Detecta automàticament si ets a Windows o Linux per utilitzar els mètodes de lectura de sensors adequats (WMI/PowerShell en Windows i Thermal Zones en Linux).
 
 ### Frontend (Web Modern)
 - **`index.html` & `style.css`**: Disseny premium amb mode fosc, disseny responsive i animacions d'estat (Repòs, Normal, Pesat, Perill).
